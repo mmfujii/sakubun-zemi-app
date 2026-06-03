@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "declaration": false,
+    "outDir": "./dist",
+    "typeRoots": ["./node_modules/@types"]
+  },
+  "include": ["bin/**/*", "lib/**/*"],
+  "exclude": ["node_modules", "cdk.out", "dist"]
+}
