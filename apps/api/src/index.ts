@@ -1,7 +1,7 @@
 import { serve } from "@hono/node-server";
-import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { EssaySubmitSchema } from "@sakubun-zemi/schemas";
+import { Hono } from "hono";
 
 const app = new Hono();
 
