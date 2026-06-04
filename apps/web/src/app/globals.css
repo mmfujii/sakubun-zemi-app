@@ -237,6 +237,11 @@ body {
   transform: translateY(0px);
 }
 
+/* Safe area bottom padding for iOS home indicator */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 /* Subtle glass effect for nav */
 .glass-nav {
   background: rgba(255, 255, 255, 0.92);
