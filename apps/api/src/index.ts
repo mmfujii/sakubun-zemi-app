@@ -2,8 +2,18 @@ import { serve } from "@hono/node-server";
 import { zValidator } from "@hono/zod-validator";
 import { EssaySubmitSchema } from "@sakubun-zemi/schemas";
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 
 const app = new Hono();
+
+app.use(
+  "/*",
+  cors({
+    origin: "http://localhost:3000",
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: ["Content-Type"],
+  }),
+);
 
 app.get("/", (c) => c.json({ ok: true, service: "sakubun-zemi-api" }));
 

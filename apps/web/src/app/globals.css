@@ -1,6 +1,426 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
-    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-sans:
+    ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+    "Noto Color Emoji";
+
+  /* Brand colors (green) */
+  --color-brand-50: #f0f7f4;
+  --color-brand-100: #d9eadf;
+  --color-brand-200: #b3d5bf;
+  --color-brand-300: #8dbf9f;
+  --color-brand-400: #78b490;
+  --color-brand-500: #5fa488;
+  --color-brand-600: #4d8e74;
+  --color-brand-700: #3d7560;
+  --color-brand-800: #2f6e59;
+  --color-brand-900: #1e4d3e;
+
+  /* Brand bare aliases (for bg-brand, text-brand, hover:bg-brand-dark, etc.) */
+  --color-brand: #5fa488;
+  --color-brand-dark: #2f6e59;
+  --color-brand-light: #d9eadf;
+
+  /* Accent colors (yellow) */
+  --color-accent-50: #fefce8;
+  --color-accent-100: #fdf6d8;
+  --color-accent-200: #fbeea5;
+  --color-accent-300: #f8e272;
+  --color-accent-400: #f6d95e;
+  --color-accent-500: #f4d94f;
+  --color-accent-600: #d4b832;
+  --color-accent-700: #b09520;
+  --color-accent-800: #8c7214;
+  --color-accent-900: #68520b;
+
+  /* Accent bare aliases */
+  --color-accent: #f4d94f;
+  --color-accent-dark: #d4b832;
+  --color-accent-light: #fdf6d8;
+
+  /* Background */
+  --color-bg: #fffdf8;
+
+  /* Semantic text colors */
+  --color-ink: #1a3d32;
+  --color-muted: #7a8a82;
+
+  /* Shadows */
+  --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-soft-lg: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+  --shadow-brand: 0 4px 14px rgba(95, 164, 136, 0.25);
+  --shadow-accent: 0 4px 14px rgba(244, 217, 79, 0.35);
+
+  /* Border radius */
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+}
+
+html {
+  background-color: var(--color-bg);
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ============================== */
+/* Texture background utilities   */
+/* ============================== */
+.bg-brand-texture {
+  background-color: #5fa488;
+  background-image: url("/green-texture.png");
+  background-size: 400px 400px;
+}
+.bg-accent-texture {
+  background-color: #f4d94f;
+  background-image: url("/yellow-texture.png");
+  background-size: 400px 400px;
+}
+
+/* ============================== */
+/* Smooth page transition animations */
+/* ============================== */
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+  .animate-slide-up {
+    animation: slideUp 0.35s ease-out;
+  }
+  .animate-slide-in-right {
+    animation: slideInRight 0.3s ease-out;
+  }
+  .animate-scale-in {
+    animation: scaleIn 0.25s ease-out;
+  }
+  .animate-slide-down {
+    animation: slideDown 0.35s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes voiceBalloon {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px) scale(0.9);
+  }
+  20% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-3px) scale(1);
+  }
+  100% {
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+.animate-voice-balloon {
+  animation:
+    voiceBalloon 0.5s ease-out forwards,
+    voiceBalloonFloat 2s ease-in-out 0.5s infinite;
+}
+
+@keyframes voiceBalloonFloat {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-3px);
+  }
+}
+
+/* Staggered animation delays for lists */
+.stagger-1 {
+  animation-delay: 0.05s;
+  animation-fill-mode: backwards;
+}
+.stagger-2 {
+  animation-delay: 0.1s;
+  animation-fill-mode: backwards;
+}
+.stagger-3 {
+  animation-delay: 0.15s;
+  animation-fill-mode: backwards;
+}
+.stagger-4 {
+  animation-delay: 0.2s;
+  animation-fill-mode: backwards;
+}
+.stagger-5 {
+  animation-delay: 0.25s;
+  animation-fill-mode: backwards;
+}
+.stagger-6 {
+  animation-delay: 0.3s;
+  animation-fill-mode: backwards;
+}
+
+/* Card hover effects */
+.card-hover {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 25px -5px rgba(0, 0, 0, 0.08),
+    0 4px 10px -5px rgba(0, 0, 0, 0.04);
+}
+.card-hover:active {
+  transform: translateY(0px);
+}
+
+/* Subtle glass effect for nav */
+.glass-nav {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Skeleton shimmer effect */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #e5e7eb;
+  border-radius: 8px;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+.skeleton-light {
+  position: relative;
+  overflow: hidden;
+  background: #f3f4f6;
+  border-radius: 8px;
+}
+.skeleton-light::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.8) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+.skeleton-brand {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #d1d5db 0%, #e5e7eb 100%);
+  border-radius: 16px;
+}
+.skeleton-brand::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Score circle animation */
+@keyframes scoreReveal {
+  from {
+    stroke-dashoffset: 251;
+  }
+}
+
+/* ============================== */
+/* 原稿用紙 (Genkouyoushi)        */
+/* ============================== */
+.gk-wrapper {
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid #f3f4f6;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.gk-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  padding-bottom: 24px;
+  white-space: nowrap;
+  justify-content: flex-end;
+}
+
+/* 列を右→左に並べるインラインフレックス */
+.gk-grid {
+  display: inline-flex;
+  flex-direction: row;
+  border: 2px solid #c85a4a;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", "MS PMincho", "Noto Serif JP", serif;
+  flex-shrink: 0;
+}
+
+/* 1列 */
+.gk-col {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #c85a4a;
+  position: relative;
+}
+.gk-col:first-child {
+  border-left: none;
+}
+
+/* 1マス（通常サイズ） - position: relative のみ、flexは使わない */
+.gk-cell {
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  line-height: 1;
+  border-bottom: 1px solid #e8c8c3;
+  color: #333;
+}
+.gk-cell:last-child {
+  border-bottom: none;
+}
+.gk-cell:nth-child(10) {
+  border-bottom: 1.5px dashed #d4918a;
+}
+
+/* 1マス（コンパクト） */
+.gk-cell-sm {
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  line-height: 1;
+  border-bottom: 1px solid #e8c8c3;
+  color: #333;
+}
+.gk-cell-sm:last-child {
+  border-bottom: none;
+}
+.gk-cell-sm:nth-child(10) {
+  border-bottom: 1.5px dashed #d4918a;
+}
+
+/* 空マス */
+.gk-empty {
+  color: transparent;
+}
+
+/* PC表示で原稿用紙を大きく */
+@media (min-width: 1024px) {
+  .gk-cell-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+}
+
+/* 題名・名前列の背景（specificityが .gk-cell 系より高いため定義の後ろに配置） */
+.gk-col-meta .gk-cell,
+.gk-col-meta .gk-cell-sm {
+  background: rgba(200, 90, 74, 0.03);
+}
+
+/* 200字マーカー */
+.gk-marker {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: #c85a4a;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  white-space: nowrap;
+  font-weight: bold;
 }

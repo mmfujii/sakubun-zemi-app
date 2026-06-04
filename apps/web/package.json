@@ -10,10 +10,13 @@
     "clean": "rm -rf .next dist"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
     "@sakubun-zemi/schemas": "workspace:*",
     "next": "15.1.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
+    "react-hook-form": "^7.77.0",
+    "lucide-react": "^1.7.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
