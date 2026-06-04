@@ -45,7 +45,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Protected routes: redirect unauthenticated users to login
-  const protectedRoutes = ["/dashboard", "/compose", "/history", "/prompts"];
+  const protectedRoutes = ["/dashboard", "/compose", "/history", "/prompts", "/submissions"];
   if (!user && protectedRoutes.some((route) => pathname.startsWith(route))) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
