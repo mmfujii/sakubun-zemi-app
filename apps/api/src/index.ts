@@ -3,6 +3,7 @@ import { zValidator } from "@hono/zod-validator";
 import { EssaySubmitSchema } from "@sakubun-zemi/schemas";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { prisma } from "./db";
 
 const app = new Hono();
 
@@ -16,6 +17,25 @@ app.use(
 );
 
 app.get("/", (c) => c.json({ ok: true, service: "sakubun-zemi-api" }));
+
+// お題一覧をDBから取得して返す（フロントの PromptsResponseSchema に合わせた形）
+app.get("/prompts", async (c) => {
+  // Prisma: Prompt テーブルから isActive=true の行を、作成順で全件取得
+  const prompts = await prisma.prompt.findMany({
+    where: { isActive: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  // DBの行から、フロントが欲しい項目だけに整形（isActive/createdAt は返さない）
+  return c.json({
+    prompts: prompts.map((p) => ({
+      id: p.id,
+      title: p.title,
+      body: p.body,
+      category: p.category,
+    })),
+  });
+});
 
 app.post("/essays", zValidator("json", EssaySubmitSchema), (c) => {
   const body = c.req.valid("json");

@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id          String   @id // Supabase auth user id (UUID) — JWTから取得してupsert
+  displayName String?
+  createdAt   DateTime @default(now())
+
+  submissions Submission[]
+}
+
+model Prompt {
+  id        String   @id @default(uuid())
+  title     String
+  body      String
+  category  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  submissions Submission[]
+}
+
+model Submission {
+  id        String   @id @default(uuid())
+  userId    String
+  user      Profile  @relation(fields: [userId], references: [id])
+  promptId  String?
+  prompt    Prompt?  @relation(fields: [promptId], references: [id])
+  theme     String
+  rawText   String
+  status    String   @default("completed") // pending | completed | error
+  createdAt DateTime @default(now())
+
+  feedback Feedback?
+}
+
+model Feedback {
+  id           String     @id @default(uuid())
+  submissionId String     @unique
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  overallScore Int
+  result       Json // { scores, child, parent, grammarNotes, kanjiNotes }
+  createdAt    DateTime   @default(now())
+}

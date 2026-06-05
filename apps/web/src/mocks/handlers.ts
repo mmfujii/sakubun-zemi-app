@@ -226,9 +226,11 @@ export const handlers = [
   http.get(`${API_BASE}/dashboard`, () => {
     return HttpResponse.json(mockDashboard);
   }),
-  http.get(`${API_BASE}/prompts`, () => {
-    return HttpResponse.json({ prompts: mockPrompts });
-  }),
+  // /prompts（お題一覧）は本物のHono+DBに移行済み。
+  // ここでハンドラを外すと MSW は素通り(bypass)し、リクエストが実APIに届く。
+  // http.get(`${API_BASE}/prompts`, () => {
+  //   return HttpResponse.json({ prompts: mockPrompts });
+  // }),
   http.get(`${API_BASE}/prompts/:id`, ({ params }) => {
     const prompt = mockPrompts.find((p) => p.id === params.id);
     if (!prompt) {
