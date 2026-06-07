@@ -63,6 +63,14 @@ async function main() {
     console.log(`  upserted: ${prompt.id} — ${prompt.title}`);
   }
 
+  // 仮の開発ユーザー（認証導入までの暫定。Submission.userId が指す先）
+  await prisma.profile.upsert({
+    where: { id: "dev-user-001" },
+    update: {},
+    create: { id: "dev-user-001", displayName: "開発ユーザー" },
+  });
+  console.log("  upserted profile: dev-user-001");
+
   console.log(`Seeding complete. ${prompts.length} prompts upserted.`);
 }
 
