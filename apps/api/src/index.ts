@@ -4,6 +4,7 @@ import { EssaySubmitSchema } from "@sakubun-zemi/schemas";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { prisma } from "./db";
+import { generateFeedback } from "./feedback";
 
 const app = new Hono();
 
@@ -98,25 +99,48 @@ const DEV_USER_ID = "dev-user-001";
 app.post("/essays", zValidator("json", EssaySubmitSchema), async (c) => {
   const body = c.req.valid("json"); // { theme, text }
 
-  // 作文をDBに1件保存（INSERT）
+  // 1. 作文をDBに1件保存（INSERT）。まず status=pending で作る
   const submission = await prisma.submission.create({
     data: {
       userId: DEV_USER_ID,
       theme: body.theme,
       rawText: body.text,
+      status: "pending",
       // promptId は今回なし（自由作文扱い）
-      // status は schema の @default("completed") が自動で入る
     },
   });
 
-  // 添削結果はまだスタブ（b2で本物のClaudeに差し替え）
-  return c.json({
-    submissionId: submission.id,
-    feedback: {
-      overallScore: 80,
-      comments: ["（仮レスポンス）添削処理は未実装"],
-    },
-  });
+  try {
+    // 2. Claudeで添削（DBトランザクション外。時間がかかるため）
+    const { overallScore, result } = await generateFeedback({
+      theme: body.theme,
+      text: body.text,
+    });
+
+    // 3. 添削結果を保存し、作文を完了状態に
+    await prisma.feedback.create({
+      data: {
+        submissionId: submission.id,
+        overallScore,
+        result, // Json列にcamelCaseのresultをそのまま保存
+      },
+    });
+    await prisma.submission.update({
+      where: { id: submission.id },
+      data: { status: "completed" },
+    });
+
+    // 4. 結果画面へ遷移するための submissionId を返す
+    return c.json({ submissionId: submission.id });
+  } catch (e) {
+    // 添削に失敗したら status=error にして500
+    console.error("添削生成に失敗:", e);
+    await prisma.submission.update({
+      where: { id: submission.id },
+      data: { status: "error" },
+    });
+    return c.json({ error: "添削の生成に失敗しました。もう一度お試しください" }, 500);
+  }
 });
 
 const port = Number(process.env.PORT ?? 3001);

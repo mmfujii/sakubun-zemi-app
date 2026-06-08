@@ -1,5 +1,5 @@
-// TODO: 将来は提出後に /submissions/[id] へ遷移し、実AI添削に差し替える。
-//       現在はインライン結果表示（Hono /essays スタブからの feedback を直接レンダリング）。
+// 提出すると Hono /essays が Claude で添削し、結果をDB保存。
+// 成功すると /submissions/[id] へ遷移して結果を表示する。
 //
 // 意図的に除外した機能（後フェーズで実装予定）:
 //   - 音声入力（useSpeechRecognition）
@@ -15,7 +15,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Info, Grid3x3, Loader2 } from "lucide-react";
-import { EssaySubmitSchema, type EssayFeedback } from "@sakubun-zemi/schemas";
+import { EssaySubmitSchema } from "@sakubun-zemi/schemas";
 import type { Prompt } from "@sakubun-zemi/schemas";
 import Genkouyoushi from "@/components/Genkouyoushi";
 
@@ -36,7 +36,6 @@ export default function ComposeForm({ prompt }: Props) {
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<EssayFeedback | null>(null);
 
   const charCount = text.length;
   const isOverLimit = charCount > CHAR_MAX;
@@ -48,7 +47,6 @@ export default function ComposeForm({ prompt }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setFeedback(null);
 
     const parsed = EssaySubmitSchema.safeParse({ theme: resolvedTheme, text });
     if (!parsed.success) {
@@ -66,10 +64,10 @@ export default function ComposeForm({ prompt }: Props) {
       });
       if (!res.ok) throw new Error(`サーバーエラー: ${res.status}`);
       const json = await res.json();
-      setFeedback(json.feedback);
+      // 添削成功 → 結果画面へ遷移（loadingはそのまま＝画面が変わるまで提出中表示）
+      router.push(`/submissions/${json.submissionId}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "エラーが発生しました");
-    } finally {
       setLoading(false);
     }
   };
@@ -258,46 +256,6 @@ export default function ComposeForm({ prompt }: Props) {
             "添削してもらう"
           )}
         </button>
-
-        {/* ─── インライン結果表示 ─── */}
-        {/* TODO: 将来は提出後に /submissions/[id] へ遷移し、実AI添削に差し替える */}
-        {feedback && (
-          <div
-            className="mt-2 p-5 rounded-2xl animate-scale-in"
-            style={{ background: "rgba(255,253,248,0.95)" }}
-          >
-            <h2 className="text-base font-bold mb-4" style={{ color: "#2f6e59" }}>
-              添削結果
-            </h2>
-
-            {/* スコア丸 */}
-            <div className="flex items-center gap-3 mb-4">
-              <div
-                className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-black text-white flex-shrink-0"
-                style={{ background: "#2f6e59" }}
-              >
-                {feedback.overallScore}
-              </div>
-              <span className="text-sm font-medium" style={{ color: "#5f6f69" }}>
-                / 100点
-              </span>
-            </div>
-
-            {/* コメント箇条書き */}
-            <ul className="space-y-2">
-              {feedback.comments.map((comment) => (
-                <li
-                  key={comment}
-                  className="flex gap-2 text-sm"
-                  style={{ color: "#1a3d32" }}
-                >
-                  <span style={{ color: "#f4d944", flexShrink: 0 }}>●</span>
-                  {comment}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </form>
     </div>
   );
