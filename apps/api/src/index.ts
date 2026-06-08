@@ -3,6 +3,7 @@ import { zValidator } from "@hono/zod-validator";
 import { EssaySubmitSchema } from "@sakubun-zemi/schemas";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { getUserId } from "./auth";
 import { prisma } from "./db";
 import { generateFeedback } from "./feedback";
 
@@ -13,7 +14,7 @@ app.use(
   cors({
     origin: "http://localhost:3000",
     allowMethods: ["GET", "POST", "OPTIONS"],
-    allowHeaders: ["Content-Type"],
+    allowHeaders: ["Content-Type", "Authorization"],
   }),
 );
 
@@ -40,9 +41,11 @@ app.get("/prompts", async (c) => {
 
 // ユーザーの添削履歴をDBから集計して返す（HistoryResponseSchema の形）
 app.get("/history", async (c) => {
+  const userId = await getUserId(c); // Bearerトークンを検証してユーザーID取得（無効なら401）
+
   // ユーザーの作文を新しい順で取得。feedback(点数)と prompt(お題)も一緒に取る（include = JOIN）
   const submissions = await prisma.submission.findMany({
-    where: { userId: DEV_USER_ID },
+    where: { userId },
     orderBy: { createdAt: "desc" },
     include: { feedback: true, prompt: true },
   });
@@ -68,14 +71,16 @@ app.get("/history", async (c) => {
 
 // 添削結果1件を返す（SubmissionDetail の形）
 app.get("/submissions/:id", async (c) => {
+  const userId = await getUserId(c); // 認証
   const id = c.req.param("id"); // URLの :id を取得
 
-  const sub = await prisma.submission.findUnique({
-    where: { id },
+  // id だけでなく userId でも縛る＝他人の作文IDを直打ちしても取れない
+  const sub = await prisma.submission.findFirst({
+    where: { id, userId },
     include: { feedback: true, prompt: true }, // 関連も一緒に
   });
 
-  // 見つからない or 添削がまだ無い → 404
+  // 見つからない（=自分のでない含む）or 添削がまだ無い → 404
   if (!sub?.feedback) {
     return c.json({ error: "not found" }, 404);
   }
@@ -93,11 +98,16 @@ app.get("/submissions/:id", async (c) => {
   });
 });
 
-// TODO: 認証(JWT)導入後は、ログイン中ユーザーのidに置き換える
-const DEV_USER_ID = "dev-user-001";
-
 app.post("/essays", zValidator("json", EssaySubmitSchema), async (c) => {
+  const userId = await getUserId(c); // 認証：投稿者＝ログイン中ユーザー
   const body = c.req.valid("json"); // { theme, text, promptId? }
+
+  // 外部キー制約のため、ユーザーのProfile行を用意（無ければ作る）
+  await prisma.profile.upsert({
+    where: { id: userId },
+    update: {},
+    create: { id: userId },
+  });
 
   // お題から書いた場合は、お題本文をDBから引いてプロンプトに渡す
   const prompt = body.promptId
@@ -107,7 +117,7 @@ app.post("/essays", zValidator("json", EssaySubmitSchema), async (c) => {
   // 1. 作文をDBに1件保存（INSERT）。まず status=pending で作る
   const submission = await prisma.submission.create({
     data: {
-      userId: DEV_USER_ID,
+      userId,
       theme: body.theme,
       rawText: body.text,
       status: "pending",

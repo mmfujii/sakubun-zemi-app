@@ -18,6 +18,7 @@ import { ChevronLeft, Info, Grid3x3, Loader2 } from "lucide-react";
 import { EssaySubmitSchema } from "@sakubun-zemi/schemas";
 import type { Prompt } from "@sakubun-zemi/schemas";
 import Genkouyoushi from "@/components/Genkouyoushi";
+import { createClient } from "@/lib/supabase/client";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -61,9 +62,20 @@ export default function ComposeForm({ prompt }: Props) {
 
     setLoading(true);
     try {
+      // ブラウザのSupabaseセッションからアクセストークンを取得して付与
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       const res = await fetch(`${API_BASE}/essays`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}),
+        },
         body: JSON.stringify(parsed.data),
       });
       if (!res.ok) throw new Error(`サーバーエラー: ${res.status}`);
