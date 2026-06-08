@@ -1,19 +1,10 @@
-import type { SubmissionDetail } from "@sakubun-zemi/schemas";
 import {
   Award,
-  BarChart3,
   BookOpen,
   ChevronLeft,
-  ChevronRight,
   Dumbbell,
   FileText,
-  Home,
   Lightbulb,
-  MessageCircle,
-  PenLine,
-  Pin,
-  Puzzle,
-  Search,
   Sparkles,
   Star,
   Target,
@@ -22,12 +13,9 @@ import {
 import Link from "next/link";
 import Genkouyoushi from "@/components/Genkouyoushi";
 import { getSubmission } from "@/lib/api/submission";
-import Collapsible from "./Collapsible";
+import ParentAnalysis from "./ParentAnalysis";
 
-// ────────────────────────────────────────────────────────────
-// Domain helpers
-// ────────────────────────────────────────────────────────────
-
+// ── helper（スコアカード用。barColor / scoreItems は ParentAnalysis に移動済み） ──
 const scoreLabel = (score: number) => {
   if (score >= 80) return "素晴らしい作文！";
   if (score >= 60) return "よくできました！";
@@ -42,29 +30,13 @@ const ScoreIcon = ({ score }: { score: number }) => {
   return <Dumbbell size={28} />;
 };
 
-const barColor = (score: number) => {
-  if (score >= 20) return "bg-brand";
-  if (score >= 15) return "bg-amber-400";
-  return "bg-red-400";
-};
-
-const scoreItems = [
-  { label: "課題把握力", key: "taskAlignment" as const, icon: <Target size={14} /> },
-  { label: "論理性", key: "logic" as const, icon: <Puzzle size={14} /> },
-  { label: "表現力", key: "expression" as const, icon: <Sparkles size={14} /> },
-  { label: "独自性", key: "originality" as const, icon: <Lightbulb size={14} /> },
-];
-
-// ────────────────────────────────────────────────────────────
-// Result content (new format only)
-// ────────────────────────────────────────────────────────────
-
-function ResultContent({ data }: { data: SubmissionDetail }) {
-  const { score, scores, child, parent, grammarNotes, kanjiNotes } = data;
+// ── 表示（Server Component）。child まではここで描き、保護者は ParentAnalysis に委譲 ──
+function ResultContent({ data }: { data: SubmissionSummary }) {
+  const { score, child } = data;
 
   return (
     <div className="animate-fade-in">
-      {/* Sticky header */}
+      {/* Header（戻るは Link＝Serverで動く） */}
       <div
         className="px-5 pt-4 pb-3 flex items-center gap-3 sticky top-0 z-10"
         style={{ background: "rgba(255,253,248,0.9)", backdropFilter: "blur(8px)" }}
@@ -117,8 +89,8 @@ function ResultContent({ data }: { data: SubmissionDetail }) {
                 <p className="text-base font-bold text-emerald-800">よかったところ</p>
               </div>
               <ul className="space-y-2">
-                {child.praise.map((s, i) => (
-                  <li key={i} className="text-sm text-emerald-800 leading-relaxed flex gap-2">
+                {child.praise.map((s) => (
+                  <li key={s} className="text-sm text-emerald-800 leading-relaxed flex gap-2">
                     <span className="text-emerald-400 mt-0.5 flex-shrink-0">●</span>
                     <span>{s}</span>
                   </li>
@@ -135,8 +107,8 @@ function ResultContent({ data }: { data: SubmissionDetail }) {
                 <p className="text-base font-bold text-amber-800">今回なおすところ</p>
               </div>
               <ul className="space-y-3">
-                {child.focusPoints.map((fp, i) => (
-                  <li key={i} className="bg-white/60 rounded-xl px-3 py-3">
+                {child.focusPoints.map((fp) => (
+                  <li key={fp.point} className="bg-white/60 rounded-xl px-3 py-3">
                     <p className="text-sm text-amber-800 font-bold leading-relaxed">{fp.point}</p>
                     <p className="text-xs text-amber-600 mt-1.5 leading-relaxed flex items-start gap-1.5">
                       <Lightbulb size={14} className="text-amber-400 mt-0.5 flex-shrink-0" />
@@ -158,204 +130,8 @@ function ResultContent({ data }: { data: SubmissionDetail }) {
               <p className="text-sm text-brand-700 leading-relaxed">{child.nextStep}</p>
             </div>
 
-            <Collapsible label="保護者向け分析">
-              {/* Summary */}
-              <div className="bg-slate-50 rounded-2xl p-5 ring-1 ring-slate-200">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-7 h-7 rounded-lg bg-slate-200 flex items-center justify-center">
-                    <BarChart3 size={14} className="text-slate-600" />
-                  </div>
-                  <p className="text-sm font-bold text-slate-800">総合所見</p>
-                </div>
-                <p className="text-xs text-slate-700 leading-relaxed">{parent.summary}</p>
-              </div>
-
-              {/* Issue breakdown */}
-              <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-soft">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center">
-                    <Search size={14} />
-                  </div>
-                  <p className="text-sm font-bold text-gray-900">分析内訳</p>
-                </div>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="bg-gray-50 rounded-xl px-3 py-2 text-center flex-1">
-                    <p className="text-lg font-bold text-gray-800">
-                      {parent.issueBreakdown.totalCount}
-                    </p>
-                    <p className="text-[10px] text-gray-500">検出した課題</p>
-                  </div>
-                  <ChevronRight
-                    size={14}
-                    strokeWidth={2.5}
-                    className="text-gray-400 flex-shrink-0"
-                  />
-                  <div className="bg-brand-light rounded-xl px-3 py-2 text-center flex-1">
-                    <p className="text-lg font-bold text-brand-dark">
-                      {parent.issueBreakdown.shownToChild}
-                    </p>
-                    <p className="text-[10px] text-brand">子どもに提示</p>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  {Object.entries(parent.issueBreakdown.categories).map(([cat, count]) => (
-                    <div key={cat} className="flex items-center justify-between text-xs">
-                      <span className="text-gray-600">{cat}</span>
-                      <span className="font-bold text-gray-800 tabular-nums">{count}件</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Why these */}
-              <div className="bg-slate-50 rounded-2xl p-5 ring-1 ring-slate-200">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-7 h-7 rounded-lg bg-slate-200 flex items-center justify-center">
-                    <MessageCircle size={14} className="text-slate-600" />
-                  </div>
-                  <p className="text-sm font-bold text-slate-800">今回このポイントを選んだ理由</p>
-                </div>
-                <p className="text-xs text-slate-700 leading-relaxed">{parent.whyThese}</p>
-              </div>
-
-              {/* Home advice */}
-              <div className="bg-slate-50 rounded-2xl p-5 ring-1 ring-slate-200">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-7 h-7 rounded-lg bg-slate-200 flex items-center justify-center">
-                    <Home size={14} className="text-slate-600" />
-                  </div>
-                  <p className="text-sm font-bold text-slate-800">ご家庭での声かけ</p>
-                </div>
-                <p className="text-xs text-slate-700 leading-relaxed">{parent.homeAdvice}</p>
-              </div>
-
-              {/* Grammar notes */}
-              {grammarNotes.length > 0 && (
-                <div className="bg-slate-50 rounded-2xl p-5 ring-1 ring-slate-200">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-7 h-7 rounded-lg bg-slate-200 flex items-center justify-center">
-                      <Pin size={14} className="text-slate-600" />
-                    </div>
-                    <p className="text-sm font-bold text-slate-800">表記・文法の指摘</p>
-                  </div>
-                  <ul className="space-y-3">
-                    {grammarNotes.map((note, i) => (
-                      <li key={i} className="text-xs text-slate-700 leading-relaxed">
-                        {note.suggestion ? (
-                          <div className="bg-white/60 rounded-xl px-3 py-2.5">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="line-through opacity-50 bg-slate-200 px-1.5 py-0.5 rounded">
-                                {note.original}
-                              </span>
-                              <ChevronRight
-                                size={14}
-                                strokeWidth={2.5}
-                                className="text-slate-400 flex-shrink-0"
-                              />
-                              <span className="font-bold bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">
-                                {note.suggestion}
-                              </span>
-                            </div>
-                            {note.reason && (
-                              <p className="text-slate-500 mt-1.5 text-[11px]">{note.reason}</p>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex gap-2">
-                            <span className="text-slate-400 mt-0.5 flex-shrink-0">●</span>
-                            <span>{note.original}</span>
-                          </div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Kanji notes */}
-              {kanjiNotes.length > 0 && (
-                <div className="bg-slate-50 rounded-2xl p-5 ring-1 ring-slate-200 animate-fade-in">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-7 h-7 rounded-lg bg-slate-200 flex items-center justify-center">
-                      <PenLine size={14} className="text-slate-600" />
-                    </div>
-                    <p className="text-sm font-bold text-slate-800">
-                      漢字で書けるとさらに良いところ
-                    </p>
-                  </div>
-                  <ul className="space-y-2">
-                    {kanjiNotes.map((s, i) => (
-                      <li key={i} className="text-xs text-slate-700 leading-relaxed flex gap-2">
-                        <span className="text-slate-400 mt-0.5 flex-shrink-0">●</span>
-                        <span>{s}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Score bars */}
-              <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-soft space-y-4">
-                <p className="text-xs font-bold text-gray-900 mb-1">カテゴリ別スコア</p>
-                {scoreItems.map((item) => {
-                  const s = scores[item.key].score;
-                  return (
-                    <div key={item.key}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs text-gray-600 flex items-center gap-1.5">
-                          {item.icon}
-                          <span className="font-medium">{item.label}</span>
-                        </span>
-                        <span className="text-sm font-bold text-gray-800 tabular-nums">
-                          {s}
-                          <span className="text-gray-400 font-normal">/25</span>
-                        </span>
-                      </div>
-                      <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-700 ease-out ${barColor(s)}`}
-                          style={{ width: `${(s / 25) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Score detail comments */}
-              <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-soft">
-                <p className="text-sm font-bold text-gray-900 mb-4">採点コメント</p>
-                <div className="space-y-4">
-                  {scoreItems.map((item) => {
-                    const s = scores[item.key];
-                    return (
-                      <div
-                        key={item.key}
-                        className="border-b border-gray-50 pb-3 last:border-0 last:pb-0"
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                            {item.icon} {item.label}
-                          </span>
-                          <span
-                            className={`text-xs font-bold tabular-nums ${
-                              s.score >= 20
-                                ? "text-brand"
-                                : s.score >= 15
-                                  ? "text-amber-500"
-                                  : "text-red-500"
-                            }`}
-                          >
-                            {s.score}/25
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500 leading-relaxed">{s.comment}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </Collapsible>
+            {/* 保護者分析：クリックで /parent を取得する Client島（先読みしない） */}
+            <ParentAnalysis submissionId={data.id} />
           </div>
         </div>
 
@@ -379,10 +155,7 @@ function ResultContent({ data }: { data: SubmissionDetail }) {
   );
 }
 
-// ────────────────────────────────────────────────────────────
-// Page
-// ────────────────────────────────────────────────────────────
-
+// ── Page（Server Component） ──
 export const dynamic = "force-dynamic";
 
 export default async function SubmissionDetailPage({
@@ -390,9 +163,9 @@ export default async function SubmissionDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params; // ← クライアントの use() ではなく await
+  const { id } = await params;
   try {
-    const data = await getSubmission(id); // ← サーバーで取得
+    const data = await getSubmission(id); // サーバーで取得
     return <ResultContent data={data} />;
   } catch {
     return (

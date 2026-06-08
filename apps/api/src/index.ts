@@ -65,30 +65,38 @@ app.get("/history", async (c) => {
   return c.json({ totalCount, avgScore, items });
 });
 
-// 添削結果1件を返す（SubmissionDetail の形）
 app.get("/submissions/:id", async (c) => {
-  const id = c.req.param("id"); // URLの :id を取得
-
+  const id = c.req.param("id");
   const sub = await prisma.submission.findUnique({
     where: { id },
-    include: { feedback: true, prompt: true }, // 関連も一緒に
+    include: { feedback: true, prompt: true },
   });
-
-  // 見つからない or 添削がまだ無い → 404
-  if (!sub?.feedback) {
-    return c.json({ error: "not found" }, 404);
-  }
-
-  // result(Json)には scores/child/parent/grammarNotes/kanjiNotes が入っている
+  if (!sub?.feedback) return c.json({ error: "not found" }, 404);
   const result = sub.feedback.result as Record<string, unknown>;
-
   return c.json({
     id: sub.id,
     title: sub.prompt?.title ?? sub.theme,
     rawText: sub.rawText,
     createdAt: sub.createdAt.toISOString(),
     score: sub.feedback.overallScore,
-    ...result, // scores/child/parent/grammarNotes/kanjiNotes を展開
+    child: result.child, // ← 初回に見せる「子ども向け」だけ。parent等は外す
+    // parent / grammarNotes / kanjiNotes / scores は /parent 側に任せる
+  });
+});
+
+app.get("/submissions/:id/parent", async (c) => {
+  const id = c.req.param("id"); // URLの :id
+  const sub = await prisma.submission.findUnique({
+    where: { id },
+    include: { feedback: true }, // ★ prompt は要らない（保護者分析にtitle不要）
+  });
+  if (!sub?.feedback) return c.json({ error: "not found" }, 404);
+  const result = sub.feedback.result as Record<string, unknown>;
+  return c.json({
+    parent: result.parent, // ★ 保護者セクションが使う分“だけ”返す
+    grammarNotes: result.grammarNotes,
+    kanjiNotes: result.kanjiNotes,
+    scores: result.scores,
   });
 });
 
