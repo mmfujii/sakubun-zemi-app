@@ -1,10 +1,7 @@
-"use client";
-
-import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import { ChevronRight, Star, Award, BookOpen, Dumbbell } from "lucide-react";
-import { getHistory } from "@/lib/api/history";
 import type { HistoryItem } from "@sakubun-zemi/schemas";
+import { Award, BookOpen, ChevronRight, Dumbbell, Star } from "lucide-react";
+import Link from "next/link";
+import { getHistory } from "@/lib/api/history";
 
 // ────────────────────────────────────────────────────────────
 // Domain helpers (v1踏襲)
@@ -38,50 +35,13 @@ function formatDate(isoStr: string): string {
 }
 
 // ────────────────────────────────────────────────────────────
-// Skeleton
-// ────────────────────────────────────────────────────────────
-
-function HistorySkeleton() {
-  return (
-    <div className="animate-fade-in">
-      <div className="px-5 pt-4 pb-5" style={{ background: "#fffdf8" }}>
-        <div className="skeleton h-6 w-24 mb-1" />
-        <div className="skeleton h-4 w-40 mb-5" />
-        <div className="flex gap-3">
-          <div className="flex-1 skeleton rounded-2xl h-16" />
-          <div className="flex-1 skeleton rounded-2xl h-16" />
-        </div>
-      </div>
-      <div className="px-5 pt-4 pb-4 space-y-2.5">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="skeleton rounded-2xl h-16" />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ────────────────────────────────────────────────────────────
 // Main page
 // ────────────────────────────────────────────────────────────
 
-export default function HistoryPage() {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["history"],
-    queryFn: getHistory,
-  });
+export const dynamic = "force-dynamic";
 
-  if (isLoading) return <HistorySkeleton />;
-  if (isError || !data) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <p className="text-sm font-semibold" style={{ color: "#7a8a82" }}>
-          データの取得に失敗しました。
-        </p>
-      </div>
-    );
-  }
-
+export default async function HistoryPage() {
+  const data = await getHistory(); // ★サーバーで取得
   const { totalCount, avgScore, items } = data;
 
   const avgScoreDisplay = avgScore !== null ? avgScore.toFixed(1) : "--";
@@ -90,10 +50,7 @@ export default function HistoryPage() {
     <div className="animate-fade-in">
       {/* Paper white header area */}
       <div className="px-5 pt-4 pb-5" style={{ background: "#fffdf8" }}>
-        <h1
-          className="text-xl font-bold tracking-tight mb-1"
-          style={{ color: "#2f6e59" }}
-        >
+        <h1 className="text-xl font-bold tracking-tight mb-1" style={{ color: "#2f6e59" }}>
           添削履歴
         </h1>
         <p className="text-xs mb-5" style={{ color: "#7a8a82" }}>
@@ -103,41 +60,23 @@ export default function HistoryPage() {
         {/* Stats */}
         <div className="flex gap-3">
           <div className="flex-1 bg-white/95 rounded-2xl px-4 py-3.5 border border-white/30">
-            <p
-              className="text-[10px] font-medium"
-              style={{ color: "#7a8a82" }}
-            >
+            <p className="text-[10px] font-medium" style={{ color: "#7a8a82" }}>
               添削回数
             </p>
-            <p
-              className="text-2xl font-extrabold tabular-nums mt-0.5"
-              style={{ color: "#1a3d32" }}
-            >
+            <p className="text-2xl font-extrabold tabular-nums mt-0.5" style={{ color: "#1a3d32" }}>
               {totalCount}
-              <span
-                className="text-sm font-normal ml-0.5"
-                style={{ color: "#7a8a82" }}
-              >
+              <span className="text-sm font-normal ml-0.5" style={{ color: "#7a8a82" }}>
                 件
               </span>
             </p>
           </div>
           <div className="flex-1 bg-white/95 rounded-2xl px-4 py-3.5 border border-white/30">
-            <p
-              className="text-[10px] font-medium"
-              style={{ color: "#7a8a82" }}
-            >
+            <p className="text-[10px] font-medium" style={{ color: "#7a8a82" }}>
               平均スコア
             </p>
-            <p
-              className="text-2xl font-extrabold tabular-nums mt-0.5"
-              style={{ color: "#1a3d32" }}
-            >
+            <p className="text-2xl font-extrabold tabular-nums mt-0.5" style={{ color: "#1a3d32" }}>
               {avgScoreDisplay}
-              <span
-                className="text-sm font-normal ml-0.5"
-                style={{ color: "#7a8a82" }}
-              >
+              <span className="text-sm font-normal ml-0.5" style={{ color: "#7a8a82" }}>
                 / 100
               </span>
             </p>
@@ -180,10 +119,7 @@ export default function HistoryPage() {
                     <ScoreIcon score={score} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p
-                      className="text-sm font-semibold truncate"
-                      style={{ color: "#1a3d32" }}
-                    >
+                    <p className="text-sm font-semibold truncate" style={{ color: "#1a3d32" }}>
                       {item.title}
                     </p>
                     <div className="flex items-center gap-2 mt-0.5">

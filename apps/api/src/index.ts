@@ -37,6 +37,61 @@ app.get("/prompts", async (c) => {
   });
 });
 
+// ユーザーの添削履歴をDBから集計して返す（HistoryResponseSchema の形）
+app.get("/history", async (c) => {
+  // ユーザーの作文を新しい順で取得。feedback(点数)と prompt(お題)も一緒に取る（include = JOIN）
+  const submissions = await prisma.submission.findMany({
+    where: { userId: DEV_USER_ID },
+    orderBy: { createdAt: "desc" },
+    include: { feedback: true, prompt: true },
+  });
+
+  // DBの行を、フロントが欲しい形(HistoryItem)に整形
+  const items = submissions.map((s) => ({
+    id: s.id,
+    title: s.prompt?.title ?? s.theme, // お題があればその題、無ければ theme
+    createdAt: s.createdAt.toISOString(), // DateTime → ISO文字列
+    score: s.feedback?.overallScore ?? 0, // 添削がまだ無ければ 0
+    category: s.prompt?.category ?? null,
+  }));
+
+  // 集計
+  const totalCount = items.length;
+  const avgScore =
+    totalCount > 0
+      ? Math.round((items.reduce((sum, i) => sum + i.score, 0) / totalCount) * 10) / 10
+      : null;
+
+  return c.json({ totalCount, avgScore, items });
+});
+
+// 添削結果1件を返す（SubmissionDetail の形）
+app.get("/submissions/:id", async (c) => {
+  const id = c.req.param("id"); // URLの :id を取得
+
+  const sub = await prisma.submission.findUnique({
+    where: { id },
+    include: { feedback: true, prompt: true }, // 関連も一緒に
+  });
+
+  // 見つからない or 添削がまだ無い → 404
+  if (!sub?.feedback) {
+    return c.json({ error: "not found" }, 404);
+  }
+
+  // result(Json)には scores/child/parent/grammarNotes/kanjiNotes が入っている
+  const result = sub.feedback.result as Record<string, unknown>;
+
+  return c.json({
+    id: sub.id,
+    title: sub.prompt?.title ?? sub.theme,
+    rawText: sub.rawText,
+    createdAt: sub.createdAt.toISOString(),
+    score: sub.feedback.overallScore,
+    ...result, // scores/child/parent/grammarNotes/kanjiNotes を展開
+  });
+});
+
 // TODO: 認証(JWT)導入後は、ログイン中ユーザーのidに置き換える
 const DEV_USER_ID = "dev-user-001";
 
