@@ -3,7 +3,7 @@ import { zValidator } from "@hono/zod-validator";
 import { EssaySubmitSchema } from "@sakubun-zemi/schemas";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { getUserId } from "./auth";
+import { getUser, getUserId } from "./auth";
 import { prisma } from "./db";
 import { generateFeedback } from "./feedback";
 
@@ -67,6 +67,54 @@ app.get("/history", async (c) => {
       : null;
 
   return c.json({ totalCount, avgScore, items });
+});
+
+// ダッシュボードのサマリーを返す（DashboardSummary の形）
+app.get("/dashboard", async (c) => {
+  const user = await getUser(c); // 認証（id＋email）
+
+  // 表示名は Profile.displayName 優先、無ければメールの@前、それも無ければ「ゲスト」
+  const profile = await prisma.profile.findUnique({ where: { id: user.id } });
+  const userName = profile?.displayName ?? user.email?.split("@")[0] ?? "ゲスト";
+
+  // ユーザーの作文を新しい順に取得し、添削済み（feedbackあり）だけJS側で絞る
+  const submissions = await prisma.submission.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+    include: { feedback: true, prompt: true },
+  });
+
+  const scored = submissions
+    .filter((s) => s.feedback !== null)
+    .map((s) => ({
+      id: s.id,
+      title: s.prompt?.title ?? s.theme,
+      createdAt: s.createdAt.toISOString(),
+      score: s.feedback?.overallScore ?? 0,
+    }));
+
+  const totalCount = scored.length;
+  const avgScore =
+    totalCount > 0
+      ? Math.round((scored.reduce((sum, s) => sum + s.score, 0) / totalCount) * 10) / 10
+      : null;
+
+  // トレンド = 直近スコア − それ以前の平均（2件以上で算出）
+  let scoreTrend: { diff: number } | null = null;
+  if (totalCount >= 2) {
+    const latest = scored[0].score;
+    const prev = scored.slice(1);
+    const prevAvg = prev.reduce((sum, s) => sum + s.score, 0) / prev.length;
+    scoreTrend = { diff: Math.round((latest - prevAvg) * 10) / 10 };
+  }
+
+  return c.json({
+    userName,
+    totalCount,
+    avgScore,
+    scoreTrend,
+    recentSubmissions: scored.slice(0, 3),
+  });
 });
 
 // 添削結果1件を返す（SubmissionDetail の形）

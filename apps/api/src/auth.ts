@@ -5,13 +5,13 @@ import { HTTPException } from "hono/http-exception";
 type SupabaseUser = { id: string; email?: string };
 
 /**
- * リクエストの Authorization: Bearer <token> を検証し、ユーザーIDを返す。
+ * リクエストの Authorization: Bearer <token> を検証し、ユーザー（id＋email）を返す。
  *
  * トークンの正当性チェックは Supabase に委ねる（/auth/v1/user を叩く）。
  * これは supabase-js の auth.getUser(token) が内部でやっているのと同じこと。
  * 無効/未指定なら 401 を投げる（Honoが自動でレスポンスにする）。
  */
-export async function getUserId(c: Context): Promise<string> {
+export async function getUser(c: Context): Promise<SupabaseUser> {
   // env はリクエスト時に読む（モジュール読み込み時だとPrismaのdotenv展開前で undefined になる）
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
@@ -43,5 +43,10 @@ export async function getUserId(c: Context): Promise<string> {
     throw new HTTPException(401, { message: "Invalid access token" });
   }
 
-  return user.id;
+  return user;
+}
+
+/** ユーザーIDだけ欲しい場合のショートカット。 */
+export async function getUserId(c: Context): Promise<string> {
+  return (await getUser(c)).id;
 }
