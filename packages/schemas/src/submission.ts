@@ -54,3 +54,29 @@ export type FocusPoint = z.infer<typeof FocusPointSchema>;
 export type GrammarNote = z.infer<typeof GrammarNoteSchema>;
 export type IssueBreakdown = z.infer<typeof IssueBreakdownSchema>;
 export type SubmissionDetail = z.infer<typeof SubmissionDetailSchema>;
+
+// 添削結果（Feedback.result に保存するcamelCaseのJSON）。
+// SubmissionDetail からメタ情報（id/title/rawText/createdAt/score）を除いた中身。
+export const FeedbackResultSchema = z.object({
+  scores: z.object({
+    taskAlignment: FeedbackScoreSchema,
+    logic: FeedbackScoreSchema,
+    expression: FeedbackScoreSchema,
+    originality: FeedbackScoreSchema,
+  }),
+  child: z.object({
+    praise: z.array(z.string()),
+    focusPoints: z.array(FocusPointSchema),
+    nextStep: z.string(),
+  }),
+  parent: z.object({
+    summary: z.string(),
+    issueBreakdown: IssueBreakdownSchema,
+    whyThese: z.string(),
+    homeAdvice: z.string(),
+  }),
+  grammarNotes: z.array(GrammarNoteSchema),
+  kanjiNotes: z.array(z.string()),
+});
+
+export type FeedbackResult = z.infer<typeof FeedbackResultSchema>;

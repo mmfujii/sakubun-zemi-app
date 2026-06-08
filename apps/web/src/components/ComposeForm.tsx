@@ -48,7 +48,11 @@ export default function ComposeForm({ prompt }: Props) {
     e.preventDefault();
     setError(null);
 
-    const parsed = EssaySubmitSchema.safeParse({ theme: resolvedTheme, text });
+    const parsed = EssaySubmitSchema.safeParse({
+      theme: resolvedTheme,
+      text,
+      promptId: prompt?.id, // お題から書いた場合のみ付く（自由作文ならundefined）
+    });
     if (!parsed.success) {
       const msgs = parsed.error.errors.map((e) => e.message).join("　");
       setError(msgs);

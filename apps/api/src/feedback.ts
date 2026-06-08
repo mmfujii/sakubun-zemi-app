@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { type FeedbackResult, FeedbackResultSchema } from "@sakubun-zemi/schemas";
 
 // ── Claude クライアント（APIキーは apps/api/.env の ANTHROPIC_API_KEY） ──
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -88,12 +89,23 @@ const SYSTEM_PROMPT = `あなたは都立中高一貫校の受検対策に精通
 
 ## grammar_notes のルール
 ※ grammar_notes は保護者にのみ表示される。そのため遠慮せず網羅的に指摘すること。
-※ 漢字で書ける語の指摘は grammar_notes に含めないこと（別途扱う）。
+※ 漢字で書ける語の指摘は grammar_notes に含めないこと（kanji_notes で別に扱う）。
 - grammar_notes は最大15件。該当するものは全て出すこと
 - 誤りがなければ空配列にする
 - 1件につき1つの語句または1つの短い表現のみ扱う
 - 促音・拗音の抜け、外来語のひらがな表記、助詞ミス（は/わ・を/お・へ/え）、ら抜き言葉、送り仮名などを優先的に確認する
 - 各 grammar_note は original / suggestion / reason の3項目を持つ
+
+## kanji_notes のルール（漢字で書けるとさらに良い箇所）
+※ kanji_notes も保護者にのみ表示される。
+- 作文中で**ひらがなのまま書かれている語**のうち、その学年までに習う漢字で書けるものを指摘する
+- すでに漢字で書かれている語は絶対に指摘しない。作文中に実在するひらがな表記のみを対象にする
+- 「わたし」「ぼく」「こと」「もの」「とき」「ところ」等、ひらがなが自然な語は指摘しない
+- 促音・外来語・助詞などの表記ミスは kanji_notes に含めない（それは grammar_notes 側）
+- 各項目は次の1行の文字列で表す: 「ひらがな表記」→「漢字表記」（小学N年生で習う漢字です）
+  - 例: 「うごいて」→「動いて」（小学3年生で習う漢字です）
+  - 中学以上で習う漢字なら「（中学以上で習う漢字です）」とする
+- 該当がなければ空配列にする
 
 ## 出力形式
 必ず以下のJSON形式のみで回答してください。JSON以外のテキストは一切含めないでください。
@@ -133,6 +145,9 @@ const SYSTEM_PROMPT = `あなたは都立中高一貫校の受検対策に精通
       "suggestion": "おかしづくり",
       "reason": "「つくり」が元の言葉なので「づくり」と書くのが正しい表記だからです"
     }
+  ],
+  "kanji_notes": [
+    "「うごいて」→「動いて」（小学3年生で習う漢字です）"
   ]
 }`;
 
@@ -163,6 +178,7 @@ type RawFeedback = {
     home_advice: string;
   };
   grammar_notes: { original: string; suggestion: string; reason: string }[];
+  kanji_notes?: string[];
 };
 
 // ── テキストからJSONオブジェクトを取り出す（前後に余計な文字が混じっても拾う） ──
@@ -201,12 +217,10 @@ function toResult(raw: RawFeedback) {
       homeAdvice: raw.parent.home_advice,
     },
     grammarNotes: raw.grammar_notes,
-    // v1では漢字指摘は別API。b2では空配列にしておく（後で対応）
-    kanjiNotes: [] as string[],
+    // 漢字指摘。Claudeが返さなければ空配列
+    kanjiNotes: raw.kanji_notes ?? [],
   };
 }
-
-export type FeedbackResult = ReturnType<typeof toResult>;
 
 // ── 添削の本体：作文を受け取り、{overallScore, result} を返す ──
 export async function generateFeedback(input: {
@@ -250,5 +264,8 @@ export async function generateFeedback(input: {
     raw.scores.expression.score +
     raw.scores.originality.score;
 
-  return { overallScore: total, result: toResult(raw) };
+  // camelに変換した結果を、保存前にZodで検証（壊れた形なら例外→/essaysでerror扱い）
+  const result = FeedbackResultSchema.parse(toResult(raw));
+
+  return { overallScore: total, result };
 }

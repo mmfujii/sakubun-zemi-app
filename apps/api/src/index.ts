@@ -97,7 +97,12 @@ app.get("/submissions/:id", async (c) => {
 const DEV_USER_ID = "dev-user-001";
 
 app.post("/essays", zValidator("json", EssaySubmitSchema), async (c) => {
-  const body = c.req.valid("json"); // { theme, text }
+  const body = c.req.valid("json"); // { theme, text, promptId? }
+
+  // お題から書いた場合は、お題本文をDBから引いてプロンプトに渡す
+  const prompt = body.promptId
+    ? await prisma.prompt.findUnique({ where: { id: body.promptId } })
+    : null;
 
   // 1. 作文をDBに1件保存（INSERT）。まず status=pending で作る
   const submission = await prisma.submission.create({
@@ -106,7 +111,8 @@ app.post("/essays", zValidator("json", EssaySubmitSchema), async (c) => {
       theme: body.theme,
       rawText: body.text,
       status: "pending",
-      // promptId は今回なし（自由作文扱い）
+      // お題が見つかればそのIDを紐付け（履歴にお題タイトル/カテゴリが出る）
+      promptId: prompt?.id,
     },
   });
 
@@ -115,6 +121,8 @@ app.post("/essays", zValidator("json", EssaySubmitSchema), async (c) => {
     const { overallScore, result } = await generateFeedback({
       theme: body.theme,
       text: body.text,
+      promptTitle: prompt?.title,
+      promptBody: prompt?.body,
     });
 
     // 3. 添削結果を保存し、作文を完了状態に
