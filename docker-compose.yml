@@ -36,5 +36,27 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # NEXT_PUBLIC_* はビルド時にクライアントJSへ焼き込まれる（ブラウザから見える値）。
+        # ブラウザ→APIは公開ポート localhost:3001 を使う。
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_API_URL: http://localhost:3001
+        NEXT_PUBLIC_API_MOCKING: disabled
+    container_name: sakubunzemi-web
+    environment:
+      # Server Component の取得先＝Webコンテナの中なので、サービス名 api:3001
+      API_URL: http://api:3001
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
 volumes:
   sakubunzemi_db_data:
