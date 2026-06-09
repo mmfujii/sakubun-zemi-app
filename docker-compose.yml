@@ -10,6 +10,30 @@ services:
       - "5433:5432"
     volumes:
       - sakubunzemi_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sakubun -d sakubunzemi"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: sakubunzemi-api
+    # 秘密情報は image に焼かず、ここで実行時に注入（ANTHROPIC_API_KEY / SUPABASE_* を読む）
+    env_file:
+      - ./apps/api/.env
+    environment:
+      # コンテナ内からは db サービスに 5432 で繋ぐ（.env の localhost:5433 を上書き）
+      DATABASE_URL: postgresql://sakubun:sakubun@db:5432/sakubunzemi
+      PORT: "3001"
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

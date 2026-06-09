@@ -1,0 +1,16 @@
+# Docker ビルドコンテキストから除外（軽量化＋秘密情報を image に焼かない）
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+**/cdk.out
+**/.git
+.git
+
+# 秘密情報は image に含めない（実行時に compose の env_file で注入する）
+**/.env
+**/.env.*
+
+# その他
+**/*.log
+_tmp_*
