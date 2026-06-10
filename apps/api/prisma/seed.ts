@@ -63,6 +63,15 @@ async function main() {
     console.log(`  upserted: ${prompt.id} — ${prompt.title}`);
   }
 
+  // 仮の開発ユーザー（認証導入までの暫定。Submission.userId が指す先）。
+  // サンプル作文より「先に」作る必要がある（外部キー制約のため）。
+  await prisma.profile.upsert({
+    where: { id: "dev-user-001" },
+    update: {},
+    create: { id: "dev-user-001", displayName: "開発ユーザー" },
+  });
+  console.log("  upserted profile: dev-user-001");
+
   // 完成済みのサンプル添削（結果画面の表示用。本来はb2でClaudeが生成する）
   await prisma.submission.upsert({
     where: { id: "seed-sub-001" },
@@ -122,14 +131,6 @@ async function main() {
     },
   });
   console.log("  upserted sample submission: seed-sub-001");
-
-  // 仮の開発ユーザー（認証導入までの暫定。Submission.userId が指す先）
-  await prisma.profile.upsert({
-    where: { id: "dev-user-001" },
-    update: {},
-    create: { id: "dev-user-001", displayName: "開発ユーザー" },
-  });
-  console.log("  upserted profile: dev-user-001");
 
   console.log(`Seeding complete. ${prompts.length} prompts upserted.`);
 }

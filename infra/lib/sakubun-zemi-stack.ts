@@ -41,7 +41,8 @@ export class SakubunZemiStack extends cdk.Stack {
     // 3) RDS PostgreSQL ＝ db コンテナのAWS版（マネージド。AWSが運用してくれる）。
     const db = new rds.DatabaseInstance(this, "Db", {
       engine: rds.DatabaseInstanceEngine.postgres({
-        version: rds.PostgresEngineVersion.VER_16_4,
+        // RDSで現在作成可能なバージョンを指定（16.4は提供終了でエラーになったため .of で明示）
+        version: rds.PostgresEngineVersion.of("16.14", "16"),
       }),
       vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
