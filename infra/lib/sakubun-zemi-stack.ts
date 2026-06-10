@@ -219,8 +219,10 @@ export class SakubunZemiStack extends cdk.Stack {
       environment: {
         PORT: "3000",
         NODE_ENV: "production",
-        // Server Component からの取得先（絶対URLが必要）。ALB 経由で /api へ。
-        API_URL: `${albOrigin}/api`,
+        // Server Component からの取得先（絶対URLが必要）。
+        // useDomain 時は ALB の生DNS名ではなく証明書と一致する公開ドメインを使う。
+        // （ALB 生DNS名だと 80→443 リダイレクト後に TLS 証明書のホスト名が不一致になり fetch 失敗する）
+        API_URL: `${publicOrigin}/api`,
       },
       logging: ecs.LogDrivers.awsLogs({ streamPrefix: "web", logGroup: webLogGroup }),
     });
