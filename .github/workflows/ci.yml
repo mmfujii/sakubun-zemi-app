@@ -26,6 +26,11 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # Prisma クライアントを生成（typecheck が @prisma/client の型を必要とするため）。
+      # postinstall でも走るが、CI では明示しておく。
+      - name: Generate Prisma client
+        run: pnpm --filter @sakubun-zemi/api exec prisma generate
+
       - name: Lint (biome)
         run: pnpm lint
 

@@ -1,20 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import { PenLine, MessageCircle, FileText } from "lucide-react";
-import { getPrompts } from "@/lib/api/prompts";
 import type { Prompt } from "@sakubun-zemi/schemas";
+import { useQuery } from "@tanstack/react-query";
+import { FileText, MessageCircle, PenLine } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
+import { getPrompts } from "@/lib/api/prompts";
 
 // ────────────────────────────────────────────────────────────
 // Domain config (v1踏襲)
 // ────────────────────────────────────────────────────────────
 
-const categoryConfig: Record<
-  string,
-  { bg: string; icon: React.ReactNode }
-> = {
+const categoryConfig: Record<string, { bg: string; icon: React.ReactNode }> = {
   テーマ作文: {
     bg: "bg-brand-light text-brand-dark ring-1 ring-brand-200",
     icon: <PenLine size={18} className="text-brand" />,
@@ -85,17 +82,13 @@ export default function PromptsPage() {
       {/* Paper white header area */}
       <div
         style={{
-          background:
-            "linear-gradient(to bottom, #fffdf8 0px, #fffdf8 130px, transparent 130px)",
+          background: "linear-gradient(to bottom, #fffdf8 0px, #fffdf8 130px, transparent 130px)",
         }}
       >
         <div className="px-5 pt-4 pb-4">
           {/* Header */}
           <div className="mb-5">
-            <h1
-              className="text-xl font-bold tracking-tight"
-              style={{ color: "#2f6e59" }}
-            >
+            <h1 className="text-xl font-bold tracking-tight" style={{ color: "#2f6e59" }}>
               問題一覧
             </h1>
             <p className="text-xs mt-1" style={{ color: "#7a8a82" }}>
@@ -153,10 +146,7 @@ export default function PromptsPage() {
                           {prompt.category}
                         </span>
                       )}
-                      <p
-                        className="font-bold text-sm leading-snug"
-                        style={{ color: "#1a3d32" }}
-                      >
+                      <p className="font-bold text-sm leading-snug" style={{ color: "#1a3d32" }}>
                         {prompt.title}
                       </p>
                       <p
@@ -167,6 +157,7 @@ export default function PromptsPage() {
                       </p>
                     </div>
                     <svg
+                      aria-hidden="true"
                       width="16"
                       height="16"
                       viewBox="0 0 24 24"

@@ -22,10 +22,7 @@ export const prisma =
   new PrismaClient({
     // 本番(production)だけ静かに、それ以外（ローカル開発）はSQLクエリも出す。
     // 素のNodeではNODE_ENVが未設定なので「!== production」で判定するのがコツ。
-    log:
-      process.env.NODE_ENV === "production"
-        ? ["error"]
-        : ["query", "error", "warn"],
+    log: process.env.NODE_ENV === "production" ? ["error"] : ["query", "error", "warn"],
   });
 
 if (process.env.NODE_ENV !== "production") {

@@ -1,10 +1,10 @@
 "use client";
 
-import { use } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { getPrompt } from "@/lib/api/prompts";
+import { use } from "react";
 import ComposeForm from "@/components/ComposeForm";
+import { getPrompt } from "@/lib/api/prompts";
 
 function PromptDetailSkeleton() {
   return (
@@ -19,11 +19,7 @@ function PromptDetailSkeleton() {
   );
 }
 
-export default function PromptDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function PromptDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
 
   const { data, isLoading, isError } = useQuery({

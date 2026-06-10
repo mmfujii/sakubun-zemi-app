@@ -14,7 +14,8 @@
       "!**/cdk.out",
       "!**/build",
       "!**/node_modules",
-      "!**/_tmp_*"
+      "!**/_tmp_*",
+      "!**/mockServiceWorker.js"
     ]
   },
   "formatter": {

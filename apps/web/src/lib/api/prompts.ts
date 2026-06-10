@@ -1,4 +1,9 @@
-import { PromptsResponseSchema, PromptSchema, type PromptsResponse, type Prompt } from "@sakubun-zemi/schemas";
+import {
+  type Prompt,
+  PromptSchema,
+  type PromptsResponse,
+  PromptsResponseSchema,
+} from "@sakubun-zemi/schemas";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 

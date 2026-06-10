@@ -1,13 +1,9 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import AppNav from "@/components/AppNav";
 import AppHeader from "@/components/AppHeader";
+import AppNav from "@/components/AppNav";
+import { createClient } from "@/lib/supabase/server";
 
-export default async function AppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const {
     data: { user },

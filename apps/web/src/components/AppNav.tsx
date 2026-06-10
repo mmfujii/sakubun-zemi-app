@@ -1,31 +1,25 @@
 "use client";
 
+import { Clock, Home, Pen } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
-import { Home, Pen, Clock } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 const navItems = [
   {
     href: "/dashboard",
     label: "ホーム",
-    icon: (active: boolean) => (
-      <Home size={22} strokeWidth={active ? 2.2 : 1.8} />
-    ),
+    icon: (active: boolean) => <Home size={22} strokeWidth={active ? 2.2 : 1.8} />,
   },
   {
     href: "/prompts",
     label: "問題",
-    icon: (active: boolean) => (
-      <Pen size={22} strokeWidth={active ? 2.2 : 1.8} />
-    ),
+    icon: (active: boolean) => <Pen size={22} strokeWidth={active ? 2.2 : 1.8} />,
   },
   {
     href: "/history",
     label: "履歴",
-    icon: (active: boolean) => (
-      <Clock size={22} strokeWidth={active ? 2.2 : 1.8} />
-    ),
+    icon: (active: boolean) => <Clock size={22} strokeWidth={active ? 2.2 : 1.8} />,
   },
 ];
 
@@ -75,7 +69,9 @@ export default function AppNav() {
                 {isActive && (
                   <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-5 h-1 bg-brand rounded-full animate-scale-in" />
                 )}
-                <span className={`transition-transform duration-200 ${isActive ? "scale-110" : ""}`}>
+                <span
+                  className={`transition-transform duration-200 ${isActive ? "scale-110" : ""}`}
+                >
                   {item.icon(isActive)}
                 </span>
                 <span

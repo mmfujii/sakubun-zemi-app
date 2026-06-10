@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { type Signup, SignupSchema } from "@sakubun-zemi/schemas";
 import { Loader2, Mail, Pen } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { toJapaneseAuthError } from "@/lib/auth-error";
-import { SignupSchema, type Signup } from "@sakubun-zemi/schemas";
+import { createClient } from "@/lib/supabase/client";
 
 export default function SignupPage() {
   const [serverError, setServerError] = useState<string | null>(null);
@@ -83,9 +83,7 @@ export default function SignupPage() {
           <div className="w-16 h-16 rounded-2xl bg-brand-dark mx-auto flex items-center justify-center mb-3">
             <Pen size={28} stroke="white" />
           </div>
-          <h1 className="text-xl font-extrabold tracking-tight text-bg">
-            アカウント登録
-          </h1>
+          <h1 className="text-xl font-extrabold tracking-tight text-bg">アカウント登録</h1>
           <p className="text-xs mt-1 text-bg/60">さくぶんゼミをはじめよう</p>
         </div>
 
@@ -94,28 +92,28 @@ export default function SignupPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             {/* Email */}
             <div>
-              <label className="text-xs font-semibold mb-1.5 block text-muted">
+              <label htmlFor="email" className="text-xs font-semibold mb-1.5 block text-muted">
                 メールアドレス
               </label>
               <input
                 {...register("email")}
+                id="email"
                 type="email"
                 placeholder="example@email.com"
                 autoComplete="email"
                 className={errors.email ? inputError : inputBase}
               />
-              {errors.email && (
-                <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
-              )}
+              {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
             </div>
 
             {/* Password */}
             <div>
-              <label className="text-xs font-semibold mb-1.5 block text-muted">
+              <label htmlFor="password" className="text-xs font-semibold mb-1.5 block text-muted">
                 パスワード
               </label>
               <input
                 {...register("password")}
+                id="password"
                 type="password"
                 placeholder="8文字以上のパスワード"
                 autoComplete="new-password"
@@ -128,20 +126,22 @@ export default function SignupPage() {
 
             {/* Password confirm */}
             <div>
-              <label className="text-xs font-semibold mb-1.5 block text-muted">
+              <label
+                htmlFor="passwordConfirm"
+                className="text-xs font-semibold mb-1.5 block text-muted"
+              >
                 パスワード（確認）
               </label>
               <input
                 {...register("passwordConfirm")}
+                id="passwordConfirm"
                 type="password"
                 placeholder="もう一度入力してください"
                 autoComplete="new-password"
                 className={errors.passwordConfirm ? inputError : inputBase}
               />
               {errors.passwordConfirm && (
-                <p className="mt-1 text-xs text-red-500">
-                  {errors.passwordConfirm.message}
-                </p>
+                <p className="mt-1 text-xs text-red-500">{errors.passwordConfirm.message}</p>
               )}
             </div>
 
@@ -172,10 +172,7 @@ export default function SignupPage() {
           <div className="mt-5 pt-4 border-t border-gray-100 text-center">
             <p className="text-sm text-muted">
               すでにアカウントをお持ちの方は{" "}
-              <Link
-                href="/login"
-                className="font-semibold hover:underline text-brand-dark"
-              >
+              <Link href="/login" className="font-semibold hover:underline text-brand-dark">
                 ログイン
               </Link>
             </p>

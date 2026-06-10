@@ -117,8 +117,8 @@ function ResultContent({ data }: { data: SubmissionDetail }) {
                 <p className="text-base font-bold text-emerald-800">よかったところ</p>
               </div>
               <ul className="space-y-2">
-                {child.praise.map((s, i) => (
-                  <li key={i} className="text-sm text-emerald-800 leading-relaxed flex gap-2">
+                {child.praise.map((s) => (
+                  <li key={s} className="text-sm text-emerald-800 leading-relaxed flex gap-2">
                     <span className="text-emerald-400 mt-0.5 flex-shrink-0">●</span>
                     <span>{s}</span>
                   </li>
@@ -135,8 +135,8 @@ function ResultContent({ data }: { data: SubmissionDetail }) {
                 <p className="text-base font-bold text-amber-800">今回なおすところ</p>
               </div>
               <ul className="space-y-3">
-                {child.focusPoints.map((fp, i) => (
-                  <li key={i} className="bg-white/60 rounded-xl px-3 py-3">
+                {child.focusPoints.map((fp) => (
+                  <li key={fp.point} className="bg-white/60 rounded-xl px-3 py-3">
                     <p className="text-sm text-amber-800 font-bold leading-relaxed">{fp.point}</p>
                     <p className="text-xs text-amber-600 mt-1.5 leading-relaxed flex items-start gap-1.5">
                       <Lightbulb size={14} className="text-amber-400 mt-0.5 flex-shrink-0" />
@@ -239,8 +239,8 @@ function ResultContent({ data }: { data: SubmissionDetail }) {
                     <p className="text-sm font-bold text-slate-800">表記・文法の指摘</p>
                   </div>
                   <ul className="space-y-3">
-                    {grammarNotes.map((note, i) => (
-                      <li key={i} className="text-xs text-slate-700 leading-relaxed">
+                    {grammarNotes.map((note) => (
+                      <li key={note.original} className="text-xs text-slate-700 leading-relaxed">
                         {note.suggestion ? (
                           <div className="bg-white/60 rounded-xl px-3 py-2.5">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -284,8 +284,8 @@ function ResultContent({ data }: { data: SubmissionDetail }) {
                     </p>
                   </div>
                   <ul className="space-y-2">
-                    {kanjiNotes.map((s, i) => (
-                      <li key={i} className="text-xs text-slate-700 leading-relaxed flex gap-2">
+                    {kanjiNotes.map((s) => (
+                      <li key={s} className="text-xs text-slate-700 leading-relaxed flex gap-2">
                         <span className="text-slate-400 mt-0.5 flex-shrink-0">●</span>
                         <span>{s}</span>
                       </li>

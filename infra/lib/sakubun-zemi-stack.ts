@@ -129,6 +129,12 @@ export class SakubunZemiStack extends cdk.Stack {
     // ブラウザから見える公開オリジン。CORS 許可に使う（ドメイン時は https サブドメイン）。
     const publicOrigin = useDomain ? `https://${AWS_SUBDOMAIN}` : albOrigin;
 
+    // db.secret は fromGeneratedSecret により必ず生成されるが、型は optional なので明示的に取り出す
+    const dbSecret = db.secret;
+    if (!dbSecret) {
+      throw new Error("RDS の自動生成シークレットが見つかりません");
+    }
+
     // ---- API（Hono） ----
     const apiLogGroup = new logs.LogGroup(this, "ApiLogGroup", {
       retention: logs.RetentionDays.ONE_WEEK,
@@ -161,7 +167,7 @@ export class SakubunZemiStack extends cdk.Stack {
       // 秘密は Secrets Manager から実行時に注入（イメージに焼かない）
       secrets: {
         // DBパスワードは RDS 生成の db シークレットから（手書きの DATABASE_URL は廃止）
-        DB_PASSWORD: ecs.Secret.fromSecretsManager(db.secret!, "password"),
+        DB_PASSWORD: ecs.Secret.fromSecretsManager(dbSecret, "password"),
         ANTHROPIC_API_KEY: ecs.Secret.fromSecretsManager(appSecret, "ANTHROPIC_API_KEY"),
         SUPABASE_URL: ecs.Secret.fromSecretsManager(appSecret, "SUPABASE_URL"),
         SUPABASE_ANON_KEY: ecs.Secret.fromSecretsManager(appSecret, "SUPABASE_ANON_KEY"),

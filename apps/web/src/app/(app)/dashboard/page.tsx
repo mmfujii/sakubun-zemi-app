@@ -1,10 +1,10 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import { Pen, BookOpen, Clock, ChevronRight } from "lucide-react";
-import { getDashboard } from "@/lib/api/dashboard";
 import type { DashboardSummary } from "@sakubun-zemi/schemas";
+import { useQuery } from "@tanstack/react-query";
+import { BookOpen, ChevronRight, Clock, Pen } from "lucide-react";
+import Link from "next/link";
+import { getDashboard } from "@/lib/api/dashboard";
 
 // ────────────────────────────────────────────────────────────
 // Domain helpers (v1 ロジック踏襲)
@@ -17,9 +17,7 @@ function getTrendMessage(scoreTrend: DashboardSummary["scoreTrend"]): string {
 
 function getTrendLabel(scoreTrend: DashboardSummary["scoreTrend"]): string | null {
   if (!scoreTrend) return null;
-  return scoreTrend.diff >= 0
-    ? `+${scoreTrend.diff.toFixed(1)}`
-    : scoreTrend.diff.toFixed(1);
+  return scoreTrend.diff >= 0 ? `+${scoreTrend.diff.toFixed(1)}` : scoreTrend.diff.toFixed(1);
 }
 
 function getCategoryTag(score: number): string | null {
@@ -41,7 +39,10 @@ function formatDate(isoStr: string): string {
 
 function DashboardSkeleton() {
   return (
-    <div className="animate-fade-in" style={{ background: "#5fa488 url(/green-texture.png)", backgroundSize: "400px 400px" }}>
+    <div
+      className="animate-fade-in"
+      style={{ background: "#5fa488 url(/green-texture.png)", backgroundSize: "400px 400px" }}
+    >
       <div
         className="relative"
         style={{
@@ -90,8 +91,7 @@ export default function DashboardPage() {
   const trendLabel = getTrendLabel(scoreTrend);
   const trendMessage = getTrendMessage(scoreTrend);
 
-  const avgScoreDisplay =
-    avgScore !== null ? avgScore.toFixed(1) : "--";
+  const avgScoreDisplay = avgScore !== null ? avgScore.toFixed(1) : "--";
 
   const welcomeMessage =
     totalCount === 0
@@ -121,10 +121,7 @@ export default function DashboardPage() {
           <p className="text-[16px] font-medium" style={{ color: "#5f6f69" }}>
             ようこそ {userName}さん
           </p>
-          <p
-            className="text-[17px] leading-relaxed mt-1"
-            style={{ color: "#213d37" }}
-          >
+          <p className="text-[17px] leading-relaxed mt-1" style={{ color: "#213d37" }}>
             {welcomeMessage}
           </p>
         </div>
@@ -142,19 +139,13 @@ export default function DashboardPage() {
             <div className="absolute -top-8 -right-8 w-36 h-36 rounded-full bg-white/[0.18]" />
             <div className="absolute -bottom-6 -left-6 w-[76px] h-[76px] rounded-full bg-white/[0.18]" />
 
-            <p
-              className="text-[14px] font-extrabold relative mb-4"
-              style={{ color: "#17483e" }}
-            >
+            <p className="text-[14px] font-extrabold relative mb-4" style={{ color: "#17483e" }}>
               成績サマリー
             </p>
 
             <div className="grid grid-cols-[1fr_1px_1fr] gap-4 items-center relative">
               <div>
-                <p
-                  className="text-[13px] mb-1.5"
-                  style={{ color: "rgba(23,72,62,0.75)" }}
-                >
+                <p className="text-[13px] mb-1.5" style={{ color: "rgba(23,72,62,0.75)" }}>
                   添削回数
                 </p>
                 <div className="flex items-baseline gap-1">
@@ -164,23 +155,14 @@ export default function DashboardPage() {
                   >
                     {totalCount}
                   </span>
-                  <span
-                    className="text-[14px] font-extrabold"
-                    style={{ color: "#0f4b3f" }}
-                  >
+                  <span className="text-[14px] font-extrabold" style={{ color: "#0f4b3f" }}>
                     回
                   </span>
                 </div>
               </div>
-              <div
-                className="w-px h-[56px]"
-                style={{ background: "rgba(23,72,62,0.15)" }}
-              />
+              <div className="w-px h-[56px]" style={{ background: "rgba(23,72,62,0.15)" }} />
               <div>
-                <p
-                  className="text-[13px] mb-1.5"
-                  style={{ color: "rgba(23,72,62,0.75)" }}
-                >
+                <p className="text-[13px] mb-1.5" style={{ color: "rgba(23,72,62,0.75)" }}>
                   平均スコア
                 </p>
                 <div className="flex items-baseline gap-1">
@@ -190,10 +172,7 @@ export default function DashboardPage() {
                   >
                     {avgScoreDisplay}
                   </span>
-                  <span
-                    className="text-[13px] font-extrabold"
-                    style={{ color: "#0f4b3f" }}
-                  >
+                  <span className="text-[13px] font-extrabold" style={{ color: "#0f4b3f" }}>
                     /100
                   </span>
                 </div>
@@ -211,7 +190,8 @@ export default function DashboardPage() {
               >
                 <span>✦</span>
                 {trendLabel && <>{trendLabel}点</>}
-                {"　"}{trendMessage}
+                {"　"}
+                {trendMessage}
               </span>
             </div>
           </div>
@@ -225,60 +205,42 @@ export default function DashboardPage() {
               className="grid grid-cols-3 divide-x"
               style={{ borderColor: "rgba(33,71,58,0.1)" }}
             >
-              <Link
-                href="/compose"
-                className="px-2 py-4 text-center card-hover block"
-              >
+              <Link href="/compose" className="px-2 py-4 text-center card-hover block">
                 <div
                   className="w-[56px] h-[42px] mx-auto mb-3 rounded-full flex items-center justify-center"
                   style={{ background: "#f7e689" }}
                 >
                   <Pen size={18} color="#2f6e59" strokeWidth={2} />
                 </div>
-                <p
-                  className="text-[13px] font-extrabold mb-1"
-                  style={{ color: "#163e34" }}
-                >
+                <p className="text-[13px] font-extrabold mb-1" style={{ color: "#163e34" }}>
                   自由作文を書く
                 </p>
                 <p className="text-[11px] leading-snug" style={{ color: "#5f6f69" }}>
                   好きなテーマで
                 </p>
               </Link>
-              <Link
-                href="/prompts"
-                className="px-2 py-4 text-center card-hover block"
-              >
+              <Link href="/prompts" className="px-2 py-4 text-center card-hover block">
                 <div
                   className="w-[56px] h-[42px] mx-auto mb-3 rounded-full flex items-center justify-center"
                   style={{ background: "#dce8de" }}
                 >
                   <BookOpen size={18} color="#2f6e59" strokeWidth={1.8} />
                 </div>
-                <p
-                  className="text-[13px] font-extrabold mb-1"
-                  style={{ color: "#163e34" }}
-                >
+                <p className="text-[13px] font-extrabold mb-1" style={{ color: "#163e34" }}>
                   お題を選ぶ
                 </p>
                 <p className="text-[11px] leading-snug" style={{ color: "#5f6f69" }}>
                   問題一覧から選べるよ
                 </p>
               </Link>
-              <Link
-                href="/history"
-                className="px-2 py-4 text-center card-hover block"
-              >
+              <Link href="/history" className="px-2 py-4 text-center card-hover block">
                 <div
                   className="w-[56px] h-[42px] mx-auto mb-3 rounded-full flex items-center justify-center"
                   style={{ background: "#e7efe9" }}
                 >
                   <Clock size={18} color="#2f6e59" strokeWidth={1.8} />
                 </div>
-                <p
-                  className="text-[13px] font-extrabold mb-1"
-                  style={{ color: "#163e34" }}
-                >
+                <p className="text-[13px] font-extrabold mb-1" style={{ color: "#163e34" }}>
                   履歴を見る
                 </p>
                 <p className="text-[11px] leading-snug" style={{ color: "#5f6f69" }}>
@@ -290,9 +252,7 @@ export default function DashboardPage() {
 
           {/* 最近の添削 */}
           <div className="flex items-center justify-between mt-6 mb-3 px-0.5">
-            <h2 className="text-[18px] font-black tracking-tight text-white">
-              最近の添削
-            </h2>
+            <h2 className="text-[18px] font-black tracking-tight text-white">最近の添削</h2>
             {recentSubmissions.length > 0 && (
               <Link
                 href="/history"
@@ -306,9 +266,7 @@ export default function DashboardPage() {
 
           {recentSubmissions.length === 0 ? (
             <div className="text-center py-10 bg-white/[0.97] rounded-[22px]">
-              <p className="text-sm text-gray-500 mb-2">
-                まだ添削がありません
-              </p>
+              <p className="text-sm text-gray-500 mb-2">まだ添削がありません</p>
               <Link
                 href="/compose"
                 className="inline-flex items-center gap-1 text-brand-dark text-sm font-semibold hover:underline"
@@ -318,50 +276,49 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {recentSubmissions.map((submission: DashboardSummary["recentSubmissions"][number], i: number) => {
-                const tag = getCategoryTag(submission.score);
-                const date = formatDate(submission.createdAt);
-                return (
-                  <Link
-                    key={submission.id}
-                    href={`/submissions/${submission.id}`}
-                    className={`block bg-white/[0.97] rounded-[22px] p-5 card-hover animate-slide-up stagger-${i + 1}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className="text-[15px] font-extrabold leading-snug"
-                          style={{ color: "#1b2f2b" }}
-                        >
-                          {submission.title}
-                        </p>
-                        <p
-                          className="text-[13px] mt-1.5"
-                          style={{ color: "#96a39f" }}
-                        >
-                          {date}
-                        </p>
-                      </div>
-                      <span
-                        className="min-w-[48px] h-9 px-2.5 rounded-full flex items-center justify-center text-[16px] font-black tabular-nums"
-                        style={{ background: "#fff2b8", color: "#b57a00" }}
-                      >
-                        {submission.score}
-                      </span>
-                    </div>
-                    {tag && (
-                      <div className="mt-3">
+              {recentSubmissions.map(
+                (submission: DashboardSummary["recentSubmissions"][number], i: number) => {
+                  const tag = getCategoryTag(submission.score);
+                  const date = formatDate(submission.createdAt);
+                  return (
+                    <Link
+                      key={submission.id}
+                      href={`/submissions/${submission.id}`}
+                      className={`block bg-white/[0.97] rounded-[22px] p-5 card-hover animate-slide-up stagger-${i + 1}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className="text-[15px] font-extrabold leading-snug"
+                            style={{ color: "#1b2f2b" }}
+                          >
+                            {submission.title}
+                          </p>
+                          <p className="text-[13px] mt-1.5" style={{ color: "#96a39f" }}>
+                            {date}
+                          </p>
+                        </div>
                         <span
-                          className="inline-flex items-center px-4 py-2 rounded-full text-[13px] font-extrabold"
-                          style={{ background: "#f9eb97", color: "#315848" }}
+                          className="min-w-[48px] h-9 px-2.5 rounded-full flex items-center justify-center text-[16px] font-black tabular-nums"
+                          style={{ background: "#fff2b8", color: "#b57a00" }}
                         >
-                          {tag}
+                          {submission.score}
                         </span>
                       </div>
-                    )}
-                  </Link>
-                );
-              })}
+                      {tag && (
+                        <div className="mt-3">
+                          <span
+                            className="inline-flex items-center px-4 py-2 rounded-full text-[13px] font-extrabold"
+                            style={{ background: "#f9eb97", color: "#315848" }}
+                          >
+                            {tag}
+                          </span>
+                        </div>
+                      )}
+                    </Link>
+                  );
+                },
+              )}
             </div>
           )}
         </div>

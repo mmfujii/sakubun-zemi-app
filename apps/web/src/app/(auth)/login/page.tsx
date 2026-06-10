@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { type Login, LoginSchema } from "@sakubun-zemi/schemas";
 import { Loader2, Pen } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { toJapaneseAuthError } from "@/lib/auth-error";
-import { LoginSchema, type Login } from "@sakubun-zemi/schemas";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -50,9 +50,7 @@ export default function LoginPage() {
           <div className="w-20 h-20 rounded-3xl bg-brand-dark mx-auto flex items-center justify-center mb-4">
             <Pen size={36} stroke="white" />
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-bg">
-            さくぶんゼミ
-          </h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-bg">さくぶんゼミ</h1>
           <p className="text-sm mt-1 text-bg/60">AIで作文力を伸ばそう</p>
         </div>
 
@@ -61,28 +59,28 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             {/* Email */}
             <div>
-              <label className="text-xs font-semibold mb-1.5 block text-muted">
+              <label htmlFor="email" className="text-xs font-semibold mb-1.5 block text-muted">
                 メールアドレス
               </label>
               <input
                 {...register("email")}
+                id="email"
                 type="email"
                 placeholder="example@email.com"
                 autoComplete="email"
                 className={errors.email ? inputError : inputBase}
               />
-              {errors.email && (
-                <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
-              )}
+              {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
             </div>
 
             {/* Password */}
             <div>
-              <label className="text-xs font-semibold mb-1.5 block text-muted">
+              <label htmlFor="password" className="text-xs font-semibold mb-1.5 block text-muted">
                 パスワード
               </label>
               <input
                 {...register("password")}
+                id="password"
                 type="password"
                 placeholder="パスワードを入力"
                 autoComplete="current-password"
@@ -120,10 +118,7 @@ export default function LoginPage() {
           <div className="mt-5 pt-4 border-t border-gray-100 text-center">
             <p className="text-sm text-muted">
               アカウントをお持ちでない方は{" "}
-              <Link
-                href="/signup"
-                className="font-semibold hover:underline text-brand-dark"
-              >
+              <Link href="/signup" className="font-semibold hover:underline text-brand-dark">
                 新規登録
               </Link>
             </p>

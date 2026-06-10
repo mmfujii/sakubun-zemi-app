@@ -19,16 +19,22 @@ export default function AppHeader() {
       <div className="flex items-center justify-between px-6 h-14">
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-2.5">
-          {/* Book mark icon — v1 そのまま */}
-          <svg width="28" height="22" viewBox="0 0 28 22" fill="none">
-            <rect x="1" y="0" width="26" height="22" rx="4" stroke="#2f6e59" strokeWidth="2.5" fill="none" />
+          {/* Book mark icon — v1 そのまま（装飾なので読み上げ対象外） */}
+          <svg width="28" height="22" viewBox="0 0 28 22" fill="none" aria-hidden="true">
+            <rect
+              x="1"
+              y="0"
+              width="26"
+              height="22"
+              rx="4"
+              stroke="#2f6e59"
+              strokeWidth="2.5"
+              fill="none"
+            />
             <rect x="0" y="0" width="14" height="22" rx="4" fill="#f8e986" fillOpacity="0.5" />
             <line x1="14" y1="3" x2="14" y2="19" stroke="#2f6e59" strokeWidth="2" />
           </svg>
-          <span
-            className="text-[22px] font-extrabold tracking-tight"
-            style={{ color: "#2f6e59" }}
-          >
+          <span className="text-[22px] font-extrabold tracking-tight" style={{ color: "#2f6e59" }}>
             さくぶんゼミ
           </span>
         </Link>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { type ReactNode, useEffect, useState } from "react";
 
 function makeQueryClient() {
   return new QueryClient({
@@ -30,7 +30,7 @@ export default function Providers({ children }: { children: ReactNode }) {
   const queryClient = getQueryClient();
   const [mswReady, setMswReady] = useState(
     // If mocking is disabled, treat as already ready
-    process.env.NEXT_PUBLIC_API_MOCKING !== "enabled"
+    process.env.NEXT_PUBLIC_API_MOCKING !== "enabled",
   );
 
   useEffect(() => {
@@ -49,7 +49,5 @@ export default function Providers({ children }: { children: ReactNode }) {
     return null;
   }
 
-  return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }

@@ -1,4 +1,4 @@
-import { HistoryResponseSchema, type HistoryResponse } from "@sakubun-zemi/schemas";
+import { type HistoryResponse, HistoryResponseSchema } from "@sakubun-zemi/schemas";
 import { serverAuthHeader } from "./auth-header";
 import { SERVER_API_BASE } from "./server-base";
 

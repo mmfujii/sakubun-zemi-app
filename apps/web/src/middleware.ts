@@ -1,35 +1,32 @@
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/config";
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(
-          cookiesToSet: {
-            name: string;
-            value: string;
-            options?: Record<string, unknown>;
-          }[]
-        ) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
+  const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
       },
-    }
-  );
+      setAll(
+        cookiesToSet: {
+          name: string;
+          value: string;
+          options?: Record<string, unknown>;
+        }[],
+      ) {
+        for (const { name, value } of cookiesToSet) {
+          request.cookies.set(name, value);
+        }
+        supabaseResponse = NextResponse.next({ request });
+        for (const { name, value, options } of cookiesToSet) {
+          supabaseResponse.cookies.set(name, value, options);
+        }
+      },
+    },
+  });
 
   // IMPORTANT: Do not add logic between createServerClient and auth.getUser().
   // Interrupting this flow can cause sessions to expire unexpectedly.

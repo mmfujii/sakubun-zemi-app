@@ -11,7 +11,5 @@ export async function serverAuthHeader(): Promise<Record<string, string>> {
     data: { session },
   } = await supabase.auth.getSession();
 
-  return session?.access_token
-    ? { Authorization: `Bearer ${session.access_token}` }
-    : {};
+  return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
 }

@@ -23,9 +23,7 @@ export const SignupSchema = z
       .string()
       .min(1, "パスワードを入力してください")
       .min(8, "パスワードは8文字以上で入力してください"),
-    passwordConfirm: z
-      .string()
-      .min(1, "確認用パスワードを入力してください"),
+    passwordConfirm: z.string().min(1, "確認用パスワードを入力してください"),
   })
   .refine((data) => data.password === data.passwordConfirm, {
     message: "パスワードが一致しません",

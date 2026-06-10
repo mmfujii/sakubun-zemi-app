@@ -12,11 +12,11 @@
 
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { ChevronLeft, Info, Grid3x3, Loader2 } from "lucide-react";
-import { EssaySubmitSchema } from "@sakubun-zemi/schemas";
 import type { Prompt } from "@sakubun-zemi/schemas";
+import { EssaySubmitSchema } from "@sakubun-zemi/schemas";
+import { ChevronLeft, Grid3x3, Info, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Genkouyoushi from "@/components/Genkouyoushi";
 import { createClient } from "@/lib/supabase/client";
 
@@ -72,9 +72,7 @@ export default function ComposeForm({ prompt }: Props) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(session?.access_token
-            ? { Authorization: `Bearer ${session.access_token}` }
-            : {}),
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
         body: JSON.stringify(parsed.data),
       });
@@ -124,9 +122,7 @@ export default function ComposeForm({ prompt }: Props) {
                 問題文
               </p>
             </div>
-            <p className="font-bold text-gray-900 text-sm mb-2 leading-snug">
-              {prompt.title}
-            </p>
+            <p className="font-bold text-gray-900 text-sm mb-2 leading-snug">{prompt.title}</p>
             <p className="text-xs text-gray-500 leading-relaxed">{prompt.body}</p>
           </div>
         )}
@@ -158,7 +154,7 @@ export default function ComposeForm({ prompt }: Props) {
         {/* ─── 作文 textarea + 文字数バー ─── */}
         <div className="animate-slide-up stagger-1">
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-bold" style={{ color: "#fffdf8" }}>
+            <label htmlFor="essay" className="text-sm font-bold" style={{ color: "#fffdf8" }}>
               作文を入力
             </label>
             <div className="flex items-center gap-3">
@@ -186,9 +182,7 @@ export default function ComposeForm({ prompt }: Props) {
                 <span
                   className="font-semibold"
                   style={
-                    charCount > 0 && !isOverLimit
-                      ? { color: "rgba(255,253,248,0.8)" }
-                      : undefined
+                    charCount > 0 && !isOverLimit ? { color: "rgba(255,253,248,0.8)" } : undefined
                   }
                 >
                   {charCount}
@@ -200,6 +194,7 @@ export default function ComposeForm({ prompt }: Props) {
           </div>
 
           <textarea
+            id="essay"
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="ここに作文を入力してください..."

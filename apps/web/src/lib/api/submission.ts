@@ -1,4 +1,4 @@
-import { SubmissionDetailSchema, type SubmissionDetail } from "@sakubun-zemi/schemas";
+import { type SubmissionDetail, SubmissionDetailSchema } from "@sakubun-zemi/schemas";
 import { serverAuthHeader } from "./auth-header";
 import { SERVER_API_BASE } from "./server-base";
 

@@ -251,7 +251,7 @@ export async function generateFeedback(input: {
   }
 
   const textBlock = response.content.find((b) => b.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
+  if (textBlock?.type !== "text") {
     throw new Error("Claude応答にテキストが含まれていません");
   }
 
