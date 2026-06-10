@@ -6,8 +6,16 @@ import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as elbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as rds from "aws-cdk-lib/aws-rds";
+import * as route53 from "aws-cdk-lib/aws-route53";
+import * as targets from "aws-cdk-lib/aws-route53-targets";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
+import * as ssm from "aws-cdk-lib/aws-ssm";
 import type { Construct } from "constructs";
+
+// フェーズD: AWSデモ用サブドメインと、証明書ARNを置くSSMパラメータ名。
+// DnsStack(永続)と本体スタックで同じ値を参照する。
+const AWS_SUBDOMAIN = "aws.sakubun-zemi.com";
+const CERT_ARN_PARAM = "/sakubunzemi/aws-cert-arn";
 
 // リポジトリルートの .env から公開値（NEXT_PUBLIC_*）を読む。
 // これらは「ブラウザに焼き込む公開値」なので、Web イメージの build args に渡す必要がある。
@@ -108,8 +116,16 @@ export class SakubunZemiStack extends cdk.Stack {
       internetFacing: true,
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
     });
-    // 公開オリジン（http://<alb-dns>）。Web のブラウザもこのオリジン、API もこの裏。
+    // 公開オリジン（http://<alb-dns>）。SSR からの API 取得先などに使う。
     const albOrigin = `http://${alb.loadBalancerDnsName}`;
+
+    // フェーズD: -c useDomain=true のとき独自ドメイン＋HTTPS を有効化する。
+    // 未設定なら従来どおり ALB の HTTP のみ（移行中も既存 deploy が壊れない）。
+    const useDomain =
+      this.node.tryGetContext("useDomain") === "true" ||
+      this.node.tryGetContext("useDomain") === true;
+    // ブラウザから見える公開オリジン。CORS 許可に使う（ドメイン時は https サブドメイン）。
+    const publicOrigin = useDomain ? `https://${AWS_SUBDOMAIN}` : albOrigin;
 
     // ---- API（Hono） ----
     const apiLogGroup = new logs.LogGroup(this, "ApiLogGroup", {
@@ -131,8 +147,8 @@ export class SakubunZemiStack extends cdk.Stack {
         PORT: "3001",
         // ALB が /api/* をここへ流すので、API も /api 配下で応答させる
         API_BASE_PATH: "/api",
-        // 同一オリジンなので実質不要だが、正しく ALB オリジンを許可しておく
-        CORS_ORIGIN: albOrigin,
+        // 同一オリジンなので実質不要だが、正しくブラウザ公開オリジンを許可しておく
+        CORS_ORIGIN: publicOrigin,
         // DATABASE_URL は db.ts が以下の値から自動組み立てする。
         // host/port/user/dbname は非機密なので env で渡す（destroy→再deploy でも常に最新のRDSを指す）。
         DB_HOST: db.dbInstanceEndpointAddress,
@@ -218,28 +234,69 @@ export class SakubunZemiStack extends cdk.Stack {
     });
 
     // ---- ALB リスナー（パスベースで web/api に振り分け） ----
-    const listener = alb.addListener("Http", { port: 80, open: true });
-    // デフォルト = Web（"/" やその他すべて）
-    listener.addTargets("WebTarget", {
-      port: 3000,
-      protocol: elbv2.ApplicationProtocol.HTTP,
-      targets: [webService],
-      // Next.js のトップはリダイレクトし得るので 200-399 を許容
-      healthCheck: { path: "/", healthyHttpCodes: "200-399" },
-    });
-    // /api と /api/* は API（Hono の basePath=/api 配下、"/api" が health 200）
-    listener.addTargets("ApiTarget", {
-      port: 3001,
-      protocol: elbv2.ApplicationProtocol.HTTP,
-      targets: [apiService],
-      priority: 10,
-      conditions: [elbv2.ListenerCondition.pathPatterns(["/api", "/api/*"])],
-      healthCheck: { path: "/api", healthyHttpCodes: "200" },
-    });
+    // web/api のターゲットを任意のリスナーに追加するヘルパー（HTTP/HTTPS で共通化）。
+    const addAppTargets = (listener: elbv2.ApplicationListener) => {
+      // デフォルト = Web（"/" やその他すべて）
+      listener.addTargets("WebTarget", {
+        port: 3000,
+        protocol: elbv2.ApplicationProtocol.HTTP,
+        targets: [webService],
+        // Next.js のトップはリダイレクトし得るので 200-399 を許容
+        healthCheck: { path: "/", healthyHttpCodes: "200-399" },
+      });
+      // /api と /api/* は API（Hono の basePath=/api 配下、"/api" が health 200）
+      listener.addTargets("ApiTarget", {
+        port: 3001,
+        protocol: elbv2.ApplicationProtocol.HTTP,
+        targets: [apiService],
+        priority: 10,
+        conditions: [elbv2.ListenerCondition.pathPatterns(["/api", "/api/*"])],
+        healthCheck: { path: "/api", healthyHttpCodes: "200" },
+      });
+    };
+
+    let publicUrl = albOrigin;
+    if (useDomain) {
+      // 証明書ARN（DnsStack が SSM に保存済み）を参照して 443 リスナーに付ける。
+      const certArn = ssm.StringParameter.valueForStringParameter(this, CERT_ARN_PARAM);
+      const httpsListener = alb.addListener("Https", {
+        port: 443,
+        open: true,
+        certificates: [elbv2.ListenerCertificate.fromArn(certArn)],
+      });
+      addAppTargets(httpsListener);
+
+      // 80 番は 443 へリダイレクト（HTTP で来たら HTTPS に飛ばす）
+      alb.addListener("Http", {
+        port: 80,
+        open: true,
+        defaultAction: elbv2.ListenerAction.redirect({
+          protocol: "HTTPS",
+          port: "443",
+          permanent: true,
+        }),
+      });
+
+      // サブドメイン aws.sakubun-zemi.com → ALB のエイリアス（deploy ごとに新ALBへ自動追従）。
+      // ゾーンは DnsStack で作成済みのものを lookup（destroy/deploy では消えない）。
+      const zone = route53.HostedZone.fromLookup(this, "AwsZone", {
+        domainName: AWS_SUBDOMAIN,
+      });
+      new route53.ARecord(this, "AliasRecord", {
+        zone,
+        // ゾーン頂点（aws.sakubun-zemi.com 自体）に alias を張る
+        target: route53.RecordTarget.fromAlias(new targets.LoadBalancerTarget(alb)),
+      });
+      publicUrl = `https://${AWS_SUBDOMAIN}`;
+    } else {
+      // 独自ドメイン未使用時は従来どおり HTTP のみ
+      const httpListener = alb.addListener("Http", { port: 80, open: true });
+      addAppTargets(httpListener);
+    }
 
     new cdk.CfnOutput(this, "AlbUrl", {
-      value: albOrigin,
-      description: "ALBのURL（/ ＝ Web、/api ＝ API）",
+      value: publicUrl,
+      description: "公開URL（/ ＝ Web、/api ＝ API）",
     });
 
     // 5) マイグレーションに使う情報を出力（デプロイ後にターミナルに表示される）。
