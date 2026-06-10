@@ -7,12 +7,16 @@ import { getUser, getUserId } from "./auth";
 import { prisma } from "./db";
 import { generateFeedback } from "./feedback";
 
-const app = new Hono();
+// AWS では ALB が /api/* をこのAPIへ振り分けるため、API自身も /api 配下で応答させる。
+// API_BASE_PATH=/api を実行時に注入（ローカルは未設定 → "/" ＝ prefix なしで従来どおり）。
+const app = new Hono().basePath(process.env.API_BASE_PATH ?? "/");
 
+// CORS 許可オリジン。ローカルは localhost:3000、AWS は同一オリジン（ALB）なので
+// 実質 CORS は発生しないが、将来のドメイン分割に備えて env で差し替え可能にしておく。
 app.use(
   "/*",
   cors({
-    origin: "http://localhost:3000",
+    origin: process.env.CORS_ORIGIN ?? "http://localhost:3000",
     allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
   }),
@@ -36,6 +40,24 @@ app.get("/prompts", async (c) => {
       body: p.body,
       category: p.category,
     })),
+  });
+});
+
+// お題の詳細を1件返す（フロントの PromptSchema の形＝単体オブジェクト）。
+// 一覧と同じく isActive のものだけ。無ければ 404（フロントは「お題が見つかりません」表示）。
+app.get("/prompts/:id", async (c) => {
+  const id = c.req.param("id");
+  const prompt = await prisma.prompt.findFirst({
+    where: { id, isActive: true },
+  });
+  if (!prompt) {
+    return c.json({ error: "Prompt not found" }, 404);
+  }
+  return c.json({
+    id: prompt.id,
+    title: prompt.title,
+    body: prompt.body,
+    category: prompt.category,
   });
 });
 
