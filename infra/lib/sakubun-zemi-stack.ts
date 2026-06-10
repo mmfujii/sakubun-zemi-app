@@ -21,6 +21,8 @@ const CERT_ARN_PARAM = "/sakubunzemi/aws-cert-arn";
 // これらは「ブラウザに焼き込む公開値」なので、Web イメージの build args に渡す必要がある。
 // （anon key は publishable なのでビルド時埋め込みで問題ない）
 function readRootEnv(key: string): string {
+  // CI(GitHub Actions)など .env が無い環境では環境変数を優先（repo の vars から注入）。
+  if (process.env[key]) return process.env[key] as string;
   const envPath = path.join(__dirname, "../../.env");
   try {
     for (const line of fs.readFileSync(envPath, "utf8").split("\n")) {

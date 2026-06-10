@@ -1,0 +1,53 @@
+name: Deploy to AWS (manual)
+
+# 手動実行のみ（コスト方針: 起動したいときだけデプロイ）。
+# OIDC で鍵なしに AWS のデプロイロールを Assume する。
+on:
+  workflow_dispatch:
+    inputs:
+      useDomain:
+        description: "独自ドメイン+HTTPS を有効化する"
+        type: boolean
+        default: true
+
+permissions:
+  id-token: write # OIDC トークン発行に必須
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # main ブランチからのみ（IAM ロールの信頼条件も main 限定）
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::277328279575:role/github-actions-deploy
+          aws-region: ap-northeast-1
+
+      - name: cdk deploy
+        working-directory: infra
+        env:
+          # Web イメージのビルド時に焼き込む公開値（repo の Variables から注入）
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          npx cdk deploy SakubunZemiStack-dev \
+            -c useDomain=${{ inputs.useDomain }} \
+            --require-approval never
