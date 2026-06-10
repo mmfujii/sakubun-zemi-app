@@ -93,8 +93,9 @@ export class SakubunZemiStack extends cdk.Stack {
     //                 ALB の /api/*     → API(Hono, 3001)
     //   ブラウザは同一オリジン（ALB）の相対パス /api を叩くので CORS は発生しない。
 
-    // アプリ用シークレット（DATABASE_URL / ANTHROPIC_API_KEY / SUPABASE_*）。
-    // ※ deploy 前に手動で作成しておく（名前: sakubunzemi/app, JSON形式）。手順は別途。
+    // アプリ用シークレット（ANTHROPIC_API_KEY / SUPABASE_*）。
+    // ※ deploy 前に手動で作成しておく（名前: sakubunzemi/app, JSON形式）。
+    //   DATABASE_URL は RDS の db シークレットから自動生成するのでここには不要。
     const appSecret = secretsmanager.Secret.fromSecretNameV2(this, "AppSecret", "sakubunzemi/app");
 
     // コンテナを動かす場（ECSクラスタ）＝ compose の起動役のAWS版
@@ -132,10 +133,17 @@ export class SakubunZemiStack extends cdk.Stack {
         API_BASE_PATH: "/api",
         // 同一オリジンなので実質不要だが、正しく ALB オリジンを許可しておく
         CORS_ORIGIN: albOrigin,
+        // DATABASE_URL は db.ts が以下の値から自動組み立てする。
+        // host/port/user/dbname は非機密なので env で渡す（destroy→再deploy でも常に最新のRDSを指す）。
+        DB_HOST: db.dbInstanceEndpointAddress,
+        DB_PORT: db.dbInstanceEndpointPort,
+        DB_USER: "sakubun",
+        DB_NAME: "sakubunzemi",
       },
       // 秘密は Secrets Manager から実行時に注入（イメージに焼かない）
       secrets: {
-        DATABASE_URL: ecs.Secret.fromSecretsManager(appSecret, "DATABASE_URL"),
+        // DBパスワードは RDS 生成の db シークレットから（手書きの DATABASE_URL は廃止）
+        DB_PASSWORD: ecs.Secret.fromSecretsManager(db.secret!, "password"),
         ANTHROPIC_API_KEY: ecs.Secret.fromSecretsManager(appSecret, "ANTHROPIC_API_KEY"),
         SUPABASE_URL: ecs.Secret.fromSecretsManager(appSecret, "SUPABASE_URL"),
         SUPABASE_ANON_KEY: ecs.Secret.fromSecretsManager(appSecret, "SUPABASE_ANON_KEY"),
