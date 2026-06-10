@@ -12,7 +12,9 @@
     "deploy": "cdk deploy",
     "diff": "cdk diff",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf cdk.out dist"
+    "clean": "rm -rf cdk.out dist",
+    "aws:up": "bash scripts/aws-up.sh",
+    "aws:down": "bash scripts/aws-down.sh"
   },
   "dependencies": {
     "aws-cdk-lib": "^2.173.0",

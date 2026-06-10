@@ -23,6 +23,19 @@ CDK アプリ (`infra/`) には 3 つのスタックがある。
 
 ## 起動する (データ入りフル起動 = Mac から)
 
+### ワンコマンド（推奨）
+
+```bash
+cd infra
+pnpm aws:up     # deploy（自分のIP許可+独自ドメイン）→ migrate → seed → URL表示 を一括
+# ...
+pnpm aws:down   # 停止（本体スタックを destroy。永続スタックは残す）
+```
+
+`scripts/aws-up.sh` / `scripts/aws-down.sh` が中身。下記の手動手順と同じことを 1 コマンドで行う。
+
+### 手動手順（中身の理解用）
+
 ```bash
 # 1) 本体スタックをデプロイ（独自ドメイン+HTTPS 込み。allowedIp=自分のIPをDBのSGに許可）
 cd infra
@@ -53,7 +66,7 @@ curl -s https://aws.sakubun-zemi.com/api/prompts   # お題JSONが返ればOK
 
 ```bash
 cd infra
-npx cdk destroy SakubunZemiStack-dev
+pnpm aws:down          # 推奨（= npx cdk destroy SakubunZemiStack-dev --force）
 ```
 
 - **本体スタックだけ** destroy する。永続 2 つ (Dns / GithubOidc) は消さない。
