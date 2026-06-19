@@ -10,6 +10,10 @@ datasource db {
 model Profile {
   id          String   @id // Supabase auth user id (UUID) — JWTから取得してupsert
   displayName String?
+  // お子さま情報（1ユーザー1件。V1の child_profiles を Profile に統合）
+  childName    String?
+  grade        Int? // 小学N年生
+  targetSchool String?
   createdAt   DateTime @default(now())
 
   submissions Submission[]
