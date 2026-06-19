@@ -1,11 +1,12 @@
 import { serve } from "@hono/node-server";
 import { zValidator } from "@hono/zod-validator";
-import { EssaySubmitSchema } from "@sakubun-zemi/schemas";
+import { EssaySubmitSchema, OcrRequestSchema } from "@sakubun-zemi/schemas";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { getUser, getUserId } from "./auth";
 import { prisma } from "./db";
 import { generateFeedback } from "./feedback";
+import { ocrImages } from "./ocr";
 
 // AWS では ALB が /api/* をこのAPIへ振り分けるため、API自身も /api 配下で応答させる。
 // API_BASE_PATH=/api を実行時に注入（ローカルは未設定 → "/" ＝ prefix なしで従来どおり）。
@@ -228,6 +229,21 @@ app.post("/essays", zValidator("json", EssaySubmitSchema), async (c) => {
       data: { status: "error" },
     });
     return c.json({ error: "添削の生成に失敗しました。もう一度お試しください" }, 500);
+  }
+});
+
+// 写真をClaude visionで文字起こしして返す（画像は保存しない＝メモリ処理のみ）。
+// フロントは返ってきた text を編集してから /essays に提出する。
+app.post("/ocr", zValidator("json", OcrRequestSchema), async (c) => {
+  await getUserId(c); // 認証：ログイン中ユーザーのみ
+  const { images } = c.req.valid("json");
+
+  try {
+    const text = await ocrImages(images);
+    return c.json({ text });
+  } catch (e) {
+    console.error("OCRに失敗:", e);
+    return c.json({ error: "文字起こしに失敗しました。もう一度お試しください" }, 500);
   }
 });
 
