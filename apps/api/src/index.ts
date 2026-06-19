@@ -7,6 +7,7 @@ import { getUser, getUserId } from "./auth";
 import { prisma } from "./db";
 import { generateFeedback } from "./feedback";
 import { ocrImages } from "./ocr";
+import { QUOTA_ENABLED, checkQuota } from "./quota";
 
 // AWS では ALB が /api/* をこのAPIへ振り分けるため、API自身も /api 配下で応答させる。
 // API_BASE_PATH=/api を実行時に注入（ローカルは未設定 → "/" ＝ prefix なしで従来どおり）。
@@ -169,6 +170,25 @@ app.get("/submissions/:id", async (c) => {
   });
 });
 
+// 添削の残り回数（quota）を返す。enabled=false は課金無効環境。
+app.get("/quota", async (c) => {
+  const userId = await getUserId(c);
+  if (!QUOTA_ENABLED) {
+    return c.json({
+      canSubmit: true,
+      plan: "free",
+      used: 0,
+      limit: 0,
+      remaining: 0,
+      ticketBalance: 0,
+      willUseTicket: false,
+      enabled: false,
+    });
+  }
+  const quota = await checkQuota(userId);
+  return c.json({ ...quota, enabled: true });
+});
+
 // お子さま情報を取得（無ければ空のProfileを作って返す）
 app.get("/profile", async (c) => {
   const userId = await getUserId(c);
@@ -222,6 +242,18 @@ app.post("/essays", zValidator("json", EssaySubmitSchema), async (c) => {
     create: { id: userId },
   });
 
+  // 課金ゲート（QUOTA_ENABLED時のみ）。上限到達なら作文を作らず402で返す
+  const quota = QUOTA_ENABLED ? await checkQuota(userId) : null;
+  if (quota && !quota.canSubmit) {
+    return c.json(
+      {
+        error: "添削の上限に達しました。プランのアップグレードかチケットをご検討ください",
+        code: "QUOTA_EXCEEDED",
+      },
+      402,
+    );
+  }
+
   // お題から書いた場合は、お題本文をDBから引いてプロンプトに渡す
   const prompt = body.promptId
     ? await prisma.prompt.findUnique({ where: { id: body.promptId } })
@@ -265,6 +297,14 @@ app.post("/essays", zValidator("json", EssaySubmitSchema), async (c) => {
       where: { id: submission.id },
       data: { status: "completed" },
     });
+
+    // 月上限を超えた分はチケットを1枚消費
+    if (quota?.willUseTicket) {
+      await prisma.subscription.update({
+        where: { userId },
+        data: { ticketBalance: { decrement: 1 } },
+      });
+    }
 
     // 4. 結果画面へ遷移するための submissionId を返す
     return c.json({ submissionId: submission.id });
