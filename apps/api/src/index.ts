@@ -1,6 +1,6 @@
 import { serve } from "@hono/node-server";
 import { zValidator } from "@hono/zod-validator";
-import { EssaySubmitSchema, OcrRequestSchema } from "@sakubun-zemi/schemas";
+import { EssaySubmitSchema, OcrRequestSchema, ProfileUpdateSchema } from "@sakubun-zemi/schemas";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { getUser, getUserId } from "./auth";
@@ -18,7 +18,7 @@ app.use(
   "/*",
   cors({
     origin: process.env.CORS_ORIGIN ?? "http://localhost:3000",
-    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowMethods: ["GET", "POST", "PUT", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
   }),
 );
@@ -169,12 +169,54 @@ app.get("/submissions/:id", async (c) => {
   });
 });
 
+// お子さま情報を取得（無ければ空のProfileを作って返す）
+app.get("/profile", async (c) => {
+  const userId = await getUserId(c);
+  const profile = await prisma.profile.upsert({
+    where: { id: userId },
+    update: {},
+    create: { id: userId },
+  });
+  return c.json({
+    displayName: profile.displayName,
+    childName: profile.childName,
+    grade: profile.grade,
+    targetSchool: profile.targetSchool,
+  });
+});
+
+// お子さま情報を更新（名前/学年/志望校。未設定はnullで送る）
+app.put("/profile", zValidator("json", ProfileUpdateSchema), async (c) => {
+  const userId = await getUserId(c);
+  const body = c.req.valid("json");
+  const profile = await prisma.profile.upsert({
+    where: { id: userId },
+    update: {
+      childName: body.childName,
+      grade: body.grade,
+      targetSchool: body.targetSchool,
+    },
+    create: {
+      id: userId,
+      childName: body.childName,
+      grade: body.grade,
+      targetSchool: body.targetSchool,
+    },
+  });
+  return c.json({
+    displayName: profile.displayName,
+    childName: profile.childName,
+    grade: profile.grade,
+    targetSchool: profile.targetSchool,
+  });
+});
+
 app.post("/essays", zValidator("json", EssaySubmitSchema), async (c) => {
   const userId = await getUserId(c); // 認証：投稿者＝ログイン中ユーザー
   const body = c.req.valid("json"); // { theme, text, promptId? }
 
-  // 外部キー制約のため、ユーザーのProfile行を用意（無ければ作る）
-  await prisma.profile.upsert({
+  // 外部キー制約のため、ユーザーのProfile行を用意（無ければ作る）。子情報も取得して添削に使う
+  const profile = await prisma.profile.upsert({
     where: { id: userId },
     update: {},
     create: { id: userId },
@@ -206,6 +248,9 @@ app.post("/essays", zValidator("json", EssaySubmitSchema), async (c) => {
       promptBody: prompt?.body,
       targetLengthMin: body.targetLengthMin,
       targetLengthMax: body.targetLengthMax,
+      childName: profile.childName ?? undefined,
+      grade: profile.grade ?? undefined,
+      targetSchool: profile.targetSchool ?? undefined,
     });
 
     // 3. 添削結果を保存し、作文を完了状態に

@@ -230,6 +230,9 @@ export async function generateFeedback(input: {
   promptBody?: string;
   targetLengthMin?: number;
   targetLengthMax?: number;
+  childName?: string;
+  grade?: number;
+  targetSchool?: string;
 }): Promise<{ overallScore: number; result: FeedbackResult }> {
   // お題ありなら問題文、なければ自由作文として組み立てる
   const promptSection = input.promptTitle
@@ -246,7 +249,13 @@ export async function generateFeedback(input: {
           ? `\n## 目標字数\n${input.targetLengthMin}字以上\n※この字数を基準に、字数の過不足も評価に含めてください。`
           : "";
 
-  const userMessage = `${promptSection}${targetLengthSection}\n\n## 作文（${input.text.length}字）\n${input.text}`;
+  // 子どもの情報（V1移植）: 名前/学年/志望校。いずれか設定があれば添削に渡す
+  const childInfoSection =
+    input.childName || input.grade || input.targetSchool
+      ? `\n\n## 子どもの情報\n- 名前: ${input.childName ?? "未設定"}\n- 学年: ${input.grade ? `小学${input.grade}年生` : "未設定"}\n- 志望校: ${input.targetSchool ?? "未設定"}`
+      : "";
+
+  const userMessage = `${promptSection}${targetLengthSection}${childInfoSection}\n\n## 作文（${input.text.length}字）\n${input.text}`;
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
