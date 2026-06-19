@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogoutButton } from "@/components/LogoutButton";
+import { User } from "lucide-react";
 
 // トップレベル画面のみヘッダー表示（詳細画面は独自ヘッダーを持つ）
 const TOP_LEVEL_PATHS = ["/dashboard", "/prompts", "/history", "/mypage"];
@@ -39,9 +39,14 @@ export default function AppHeader() {
           </span>
         </Link>
 
-        {/* 右側: /mypage 未実装のため当面 LogoutButton を配置 */}
-        {/* TODO: /mypage 実装時にユーザーアイコン (User size={18}) に戻す */}
-        <LogoutButton />
+        {/* 右側: マイページ（お子さま情報・ログアウト） */}
+        <Link
+          href="/mypage"
+          aria-label="マイページ"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-brand hover:bg-brand-light/40 transition-colors"
+        >
+          <User size={18} strokeWidth={2.2} />
+        </Link>
       </div>
     </header>
   );
