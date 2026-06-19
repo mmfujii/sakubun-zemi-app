@@ -16,7 +16,8 @@ model Profile {
   targetSchool String?
   createdAt   DateTime @default(now())
 
-  submissions Submission[]
+  submissions  Submission[]
+  subscription Subscription?
 }
 
 model Prompt {
@@ -51,4 +52,19 @@ model Feedback {
   overallScore Int
   result       Json // { scores, child, parent, grammarNotes, kanjiNotes }
   createdAt    DateTime   @default(now())
+}
+
+model Subscription {
+  userId               String    @id
+  user                 Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                 String    @default("free") // free | light
+  freeLimit            Int       @default(1) // 無料プランの生涯上限
+  monthlyLimit         Int       @default(0) // ライトプランの月上限
+  ticketBalance        Int       @default(0) // 追加チケット残数
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 }
