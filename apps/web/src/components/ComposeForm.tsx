@@ -10,11 +10,12 @@
 
 import type { Prompt } from "@sakubun-zemi/schemas";
 import { EssaySubmitSchema } from "@sakubun-zemi/schemas";
-import { ChevronLeft, Grid3x3, Info, Loader2 } from "lucide-react";
+import { ChevronLeft, Grid3x3, Info, Loader2, Mic, MicOff } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Genkouyoushi from "@/components/Genkouyoushi";
 import ImageUploader from "@/components/ImageUploader";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { createClient } from "@/lib/supabase/client";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -37,6 +38,37 @@ export default function ComposeForm({ prompt }: Props) {
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const cursorPosRef = useRef(0);
+
+  // 音声入力（Web Speech API）。確定テキストをカーソル位置に挿入する
+  const {
+    isListening,
+    error: voiceError,
+    isSupported: voiceSupported,
+    toggle: toggleVoice,
+  } = useSpeechRecognition({
+    onInterim: useCallback(() => {
+      // 暫定テキストは本文に反映しない
+    }, []),
+    onTranscript: useCallback((transcript: string) => {
+      const pos = cursorPosRef.current;
+      setText((prev) => {
+        const next = prev.slice(0, pos) + transcript + prev.slice(pos);
+        cursorPosRef.current = pos + transcript.length;
+        return next;
+      });
+      requestAnimationFrame(() => {
+        const ta = textareaRef.current;
+        if (ta) {
+          ta.focus();
+          ta.selectionStart = cursorPosRef.current;
+          ta.selectionEnd = cursorPosRef.current;
+        }
+      });
+    }, []),
+  });
 
   const charCount = text.length;
   const isOverLimit = charCount > CHAR_MAX;
@@ -221,9 +253,45 @@ export default function ComposeForm({ prompt }: Props) {
         {inputMode === "keyboard" && (
           <div className="animate-slide-up stagger-1">
             <div className="flex items-center justify-between mb-2">
-              <label htmlFor="essay" className="text-sm font-bold" style={{ color: "#fffdf8" }}>
-                作文を入力
-              </label>
+              <div className="flex items-center gap-2">
+                <label htmlFor="essay" className="text-sm font-bold" style={{ color: "#fffdf8" }}>
+                  作文を入力
+                </label>
+                {voiceSupported && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={toggleVoice}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 ${
+                        isListening
+                          ? "bg-red-500 text-white shadow-md"
+                          : "bg-white/20 text-white hover:bg-white/30 shadow-sm"
+                      }`}
+                      aria-label={isListening ? "音声入力を停止" : "音声入力を開始"}
+                    >
+                      {isListening ? (
+                        <MicOff size={15} strokeWidth={2.5} />
+                      ) : (
+                        <Mic size={15} strokeWidth={2.5} />
+                      )}
+                    </button>
+                    {isListening && (
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 animate-voice-balloon pointer-events-none">
+                        <div className="bg-red-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap shadow-lg flex items-center gap-1.5">
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
+                          </span>
+                          音声入力中
+                        </div>
+                        <div className="flex justify-center">
+                          <div className="w-2 h-2 bg-red-500 rotate-45 -mt-1" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               <div className="flex items-center gap-3">
                 {/* 文字数バー */}
                 <div
@@ -260,15 +328,27 @@ export default function ComposeForm({ prompt }: Props) {
               </div>
             </div>
 
+            {voiceError && (
+              <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-xl border border-red-100 mb-2 animate-scale-in">
+                {voiceError}
+              </div>
+            )}
+
             <textarea
+              ref={textareaRef}
               id="essay"
               value={text}
               onChange={(e) => setText(e.target.value)}
+              onSelect={(e) => {
+                cursorPosRef.current = (e.target as HTMLTextAreaElement).selectionStart;
+              }}
               placeholder={prompt ? "ここに作文を入力してください..." : "自由にテーマを決めて作文を書いてみましょう..."}
               className={`w-full h-60 px-4 py-4 rounded-2xl border-2 bg-white text-sm leading-[1.8] resize-none transition-all duration-200 focus:outline-none focus:ring-0 ${
-                isOverLimit
+                isListening
                   ? "border-red-300 focus:border-red-400"
-                  : "border-gray-200 focus:border-brand"
+                  : isOverLimit
+                    ? "border-red-300 focus:border-red-400"
+                    : "border-gray-200 focus:border-brand"
               }`}
             />
 
