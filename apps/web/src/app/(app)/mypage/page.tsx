@@ -3,7 +3,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { LogoutButton } from "@/components/LogoutButton";
 import { createClient } from "@/lib/supabase/client";
 
@@ -19,13 +19,13 @@ export default function MyPage() {
   const [error, setError] = useState<string | null>(null);
 
   // 認証トークンを付けて API を叩くヘルパ
-  const authHeaders = async (): Promise<Record<string, string>> => {
+  const authHeaders = useCallback(async (): Promise<Record<string, string>> => {
     const supabase = createClient();
     const {
       data: { session },
     } = await supabase.auth.getSession();
     return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
-  };
+  }, []);
 
   // 初期ロード
   useEffect(() => {
@@ -44,7 +44,7 @@ export default function MyPage() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [authHeaders]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,10 +83,7 @@ export default function MyPage() {
       ) : (
         <form onSubmit={handleSave} className="space-y-5">
           <section className="bg-white rounded-2xl p-5 border border-gray-100 animate-slide-up space-y-4">
-            <h3
-              className="text-xs font-bold uppercase tracking-wider"
-              style={{ color: "#7a8a82" }}
-            >
+            <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: "#7a8a82" }}>
               お子さま情報
             </h3>
 
@@ -131,7 +128,10 @@ export default function MyPage() {
             </div>
 
             <div>
-              <label htmlFor="targetSchool" className="text-sm font-bold block mb-1.5 text-gray-700">
+              <label
+                htmlFor="targetSchool"
+                className="text-sm font-bold block mb-1.5 text-gray-700"
+              >
                 志望校
                 <span className="text-xs font-normal ml-1 text-gray-400">任意</span>
               </label>
@@ -165,7 +165,10 @@ export default function MyPage() {
             type="submit"
             disabled={saving}
             className="w-full py-4 rounded-2xl text-white font-bold text-base disabled:opacity-40 active:scale-[0.98] transition-all duration-200"
-            style={{ background: "rgba(255,253,248,0.2)", border: "1px solid rgba(255,253,248,0.3)" }}
+            style={{
+              background: "rgba(255,253,248,0.2)",
+              border: "1px solid rgba(255,253,248,0.3)",
+            }}
           >
             {saving ? (
               <span className="flex items-center justify-center gap-2">

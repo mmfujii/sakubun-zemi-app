@@ -8,7 +8,6 @@
 
 "use client";
 
-import { useCallback, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowUp,
@@ -23,6 +22,7 @@ import {
   Sun,
   Upload,
 } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -266,9 +266,7 @@ export default function ImageUploader({ onTextExtracted, onSwitchToKeyboard }: I
 
       const normalized = gray / 255;
       const curved =
-        normalized < 0.5
-          ? 0.5 * (2 * normalized) ** 0.6
-          : 1 - 0.5 * (2 * (1 - normalized)) ** 0.6;
+        normalized < 0.5 ? 0.5 * (2 * normalized) ** 0.6 : 1 - 0.5 * (2 * (1 - normalized)) ** 0.6;
       gray = curved * 255;
 
       data[i] = gray;
@@ -436,6 +434,7 @@ export default function ImageUploader({ onTextExtracted, onSwitchToKeyboard }: I
   };
 
   // Step 3: OCR実行（/ocr に処理済み画像を1枚送る）
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 内部関数は安定でカーソル/履歴に依存しない（V1踏襲）
   const handleStartOCR = useCallback(async () => {
     if (!currentFile) return;
     setPhase("loading");
@@ -624,6 +623,7 @@ export default function ImageUploader({ onTextExtracted, onSwitchToKeyboard }: I
         </div>
 
         <div className="relative w-full bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
+          {/* biome-ignore lint/performance/noImgElement: data URLのプレビュー表示でnext/imageの最適化対象外 */}
           <img src={preview} alt="プレビュー" className="w-full h-auto block" />
         </div>
 
@@ -678,6 +678,7 @@ export default function ImageUploader({ onTextExtracted, onSwitchToKeyboard }: I
 
         {pages[0] && (
           <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 border border-gray-200">
+            {/* biome-ignore lint/performance/noImgElement: data URLのサムネイルでnext/imageの最適化対象外 */}
             <img
               src={pages[0].preview}
               alt="1枚目"
@@ -744,7 +745,9 @@ export default function ImageUploader({ onTextExtracted, onSwitchToKeyboard }: I
           <p className="font-semibold mb-1">読み取り結果を確認してください</p>
           <p className="text-xs leading-relaxed">
             自動読み取りは完璧ではありません。
-            <span className="font-bold">お子さまの原稿と見比べて、違うところがあれば直してください。</span>
+            <span className="font-bold">
+              お子さまの原稿と見比べて、違うところがあれば直してください。
+            </span>
             <br />
             段落の区切りでEnterキーを押して改行を入れてください。
           </p>
@@ -767,6 +770,7 @@ export default function ImageUploader({ onTextExtracted, onSwitchToKeyboard }: I
                     }
                   }}
                 >
+                  {/* biome-ignore lint/performance/noImgElement: data URLのプレビューでnext/imageの最適化対象外 */}
                   <img
                     src={page.preview}
                     alt={`${i + 1}枚目`}

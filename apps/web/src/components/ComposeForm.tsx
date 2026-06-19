@@ -10,7 +10,16 @@
 
 import type { Prompt } from "@sakubun-zemi/schemas";
 import { EssaySubmitSchema } from "@sakubun-zemi/schemas";
-import { ChevronLeft, Grid3x3, Info, Loader2, Mic, MicOff, RotateCcw, RotateCw } from "lucide-react";
+import {
+  ChevronLeft,
+  Grid3x3,
+  Info,
+  Loader2,
+  Mic,
+  MicOff,
+  RotateCcw,
+  RotateCw,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Genkouyoushi from "@/components/Genkouyoushi";
@@ -283,7 +292,11 @@ export default function ComposeForm({ prompt }: Props) {
         {/* ─── タイトル入力 (自由作文時のみ) ─── */}
         {!prompt && (
           <div className="animate-slide-up">
-            <label htmlFor="title" className="text-sm font-bold block mb-2" style={{ color: "#fffdf8" }}>
+            <label
+              htmlFor="title"
+              className="text-sm font-bold block mb-2"
+              style={{ color: "#fffdf8" }}
+            >
               タイトル
             </label>
             <input
@@ -307,12 +320,12 @@ export default function ComposeForm({ prompt }: Props) {
         {/* ─── 目標字数 (自由作文時のみ・任意) ─── */}
         {!prompt && (
           <div className="animate-slide-up">
-            <label className="text-sm font-bold block mb-2" style={{ color: "#fffdf8" }}>
+            <span className="text-sm font-bold block mb-2" style={{ color: "#fffdf8" }}>
               目標字数
               <span className="text-xs font-normal ml-2" style={{ color: "rgba(255,253,248,0.6)" }}>
                 任意
               </span>
-            </label>
+            </span>
             <div className="flex items-center gap-2">
               <input
                 type="number"
@@ -490,7 +503,11 @@ export default function ComposeForm({ prompt }: Props) {
               onSelect={(e) => {
                 cursorPosRef.current = (e.target as HTMLTextAreaElement).selectionStart;
               }}
-              placeholder={prompt ? "ここに作文を入力してください..." : "自由にテーマを決めて作文を書いてみましょう..."}
+              placeholder={
+                prompt
+                  ? "ここに作文を入力してください..."
+                  : "自由にテーマを決めて作文を書いてみましょう..."
+              }
               className={`w-full h-60 px-4 py-4 rounded-2xl border-2 bg-white text-sm leading-[1.8] resize-none transition-all duration-200 focus:outline-none focus:ring-0 ${
                 isListening
                   ? "border-red-300 focus:border-red-400"

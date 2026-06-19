@@ -1,8 +1,8 @@
 "use client";
 
+import { User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User } from "lucide-react";
 
 // トップレベル画面のみヘッダー表示（詳細画面は独自ヘッダーを持つ）
 const TOP_LEVEL_PATHS = ["/dashboard", "/prompts", "/history", "/mypage"];
