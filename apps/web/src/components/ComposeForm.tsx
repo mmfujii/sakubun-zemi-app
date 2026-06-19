@@ -53,6 +53,8 @@ export default function ComposeForm({ prompt }: Props) {
       theme: resolvedTheme,
       text,
       promptId: prompt?.id, // お題から書いた場合のみ付く（自由作文ならundefined）
+      targetLengthMin: targetLengthMin ? Number.parseInt(targetLengthMin, 10) : undefined,
+      targetLengthMax: targetLengthMax ? Number.parseInt(targetLengthMax, 10) : undefined,
     });
     if (!parsed.success) {
       const msgs = parsed.error.errors.map((err) => err.message).join("　");

@@ -228,13 +228,25 @@ export async function generateFeedback(input: {
   text: string;
   promptTitle?: string;
   promptBody?: string;
+  targetLengthMin?: number;
+  targetLengthMax?: number;
 }): Promise<{ overallScore: number; result: FeedbackResult }> {
   // お題ありなら問題文、なければ自由作文として組み立てる
   const promptSection = input.promptTitle
     ? `## 問題文\n${input.promptTitle}\n${input.promptBody ?? ""}`
     : `## 自由作文\nタイトル: ${input.theme}\n※お題なしの自由作文です。作文の内容・テーマに沿って添削してください。`;
 
-  const userMessage = `${promptSection}\n\n## 作文（${input.text.length}字）\n${input.text}`;
+  // 目標字数の指示（V1移植）: min/max・以内・以上で出し分け
+  const targetLengthSection =
+    input.targetLengthMin && input.targetLengthMax
+      ? `\n## 目標字数\n${input.targetLengthMin}字〜${input.targetLengthMax}字\n※この字数範囲を基準に、字数の過不足も評価に含めてください。`
+      : input.targetLengthMax
+        ? `\n## 目標字数\n${input.targetLengthMax}字以内\n※この字数を基準に、字数の過不足も評価に含めてください。`
+        : input.targetLengthMin
+          ? `\n## 目標字数\n${input.targetLengthMin}字以上\n※この字数を基準に、字数の過不足も評価に含めてください。`
+          : "";
+
+  const userMessage = `${promptSection}${targetLengthSection}\n\n## 作文（${input.text.length}字）\n${input.text}`;
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",

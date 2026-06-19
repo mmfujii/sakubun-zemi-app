@@ -204,6 +204,8 @@ app.post("/essays", zValidator("json", EssaySubmitSchema), async (c) => {
       text: body.text,
       promptTitle: prompt?.title,
       promptBody: prompt?.body,
+      targetLengthMin: body.targetLengthMin,
+      targetLengthMax: body.targetLengthMax,
     });
 
     // 3. 添削結果を保存し、作文を完了状態に
