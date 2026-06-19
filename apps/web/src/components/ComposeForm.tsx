@@ -10,18 +10,20 @@
 
 import type { Prompt } from "@sakubun-zemi/schemas";
 import { EssaySubmitSchema } from "@sakubun-zemi/schemas";
-import { ChevronLeft, Grid3x3, Info, Loader2, Mic, MicOff } from "lucide-react";
+import { ChevronLeft, Grid3x3, Info, Loader2, Mic, MicOff, RotateCcw, RotateCw } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Genkouyoushi from "@/components/Genkouyoushi";
 import ImageUploader from "@/components/ImageUploader";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { useUndoRedo } from "@/hooks/useUndoRedo";
 import { createClient } from "@/lib/supabase/client";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 const CHAR_MIN = 50;
 const CHAR_MAX = 800;
+const DRAFT_KEY = "sakubun-zemi-draft-free";
 
 type Props = {
   prompt?: Prompt | null;
@@ -38,6 +40,8 @@ export default function ComposeForm({ prompt }: Props) {
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [navigating, setNavigating] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const cursorPosRef = useRef(0);
@@ -69,6 +73,96 @@ export default function ComposeForm({ prompt }: Props) {
       });
     }, []),
   });
+
+  const {
+    handleChange: handleTextChange,
+    setImmediate: setTextImmediate,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    resetHistory,
+  } = useUndoRedo(text, setText);
+
+  const hasUnsavedContent = text.trim().length > 0 || title.trim().length > 0;
+
+  // 下書き（自由作文のみ）: 復元（マウント時のみ）
+  // biome-ignore lint/correctness/useExhaustiveDependencies: マウント時に一度だけ実行する
+  useEffect(() => {
+    if (prompt) return;
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (!saved) return;
+      const draft = JSON.parse(saved) as {
+        title?: string;
+        text?: string;
+        targetLengthMin?: string;
+        targetLengthMax?: string;
+      };
+      if (draft.title) setTitle(draft.title);
+      if (draft.text) setTextImmediate(draft.text);
+      if (draft.targetLengthMin) setTargetLengthMin(draft.targetLengthMin);
+      if (draft.targetLengthMax) setTargetLengthMax(draft.targetLengthMax);
+      if (draft.title || draft.text) setDraftRestored(true);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // 下書き: 自動保存
+  useEffect(() => {
+    if (prompt || navigating) return;
+    try {
+      if (hasUnsavedContent) {
+        localStorage.setItem(
+          DRAFT_KEY,
+          JSON.stringify({ title, text, targetLengthMin, targetLengthMax }),
+        );
+      } else {
+        localStorage.removeItem(DRAFT_KEY);
+      }
+    } catch {
+      // ignore
+    }
+  }, [prompt, title, text, targetLengthMin, targetLengthMax, hasUnsavedContent, navigating]);
+
+  // 離脱警告（自由作文・未保存内容あり）
+  useEffect(() => {
+    if (prompt || !hasUnsavedContent || navigating) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [prompt, hasUnsavedContent, navigating]);
+
+  const clearDraft = useCallback(() => {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const discardDraft = () => {
+    setTitle("");
+    setTextImmediate("");
+    setTargetLengthMin("");
+    setTargetLengthMax("");
+    setDraftRestored(false);
+    clearDraft();
+    resetHistory();
+  };
+
+  const handleBack = () => {
+    if (hasUnsavedContent) {
+      const ok = window.confirm(
+        "入力中の作文があります。下書きは自動保存されていますが、本当に戻りますか？",
+      );
+      if (!ok) return;
+    }
+    router.back();
+  };
 
   const charCount = text.length;
   const isOverLimit = charCount > CHAR_MAX;
@@ -112,7 +206,9 @@ export default function ComposeForm({ prompt }: Props) {
       });
       if (!res.ok) throw new Error(`サーバーエラー: ${res.status}`);
       const json = await res.json();
-      // 添削成功 → 結果画面へ遷移（loadingはそのまま＝画面が変わるまで提出中表示）
+      // 添削成功 → 下書きを消して結果画面へ遷移
+      clearDraft();
+      setNavigating(true);
       router.push(`/submissions/${json.submissionId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
@@ -129,7 +225,7 @@ export default function ComposeForm({ prompt }: Props) {
       >
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={handleBack}
           className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
           style={{ background: "#e8f0ea" }}
           aria-label="戻る"
@@ -139,9 +235,32 @@ export default function ComposeForm({ prompt }: Props) {
         <h1 className="text-base font-bold flex-1" style={{ color: "#2f6e59" }}>
           {prompt ? "作文入力" : "自由作文"}
         </h1>
+        {!prompt && hasUnsavedContent && (
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm("下書きをクリアしますか？")) discardDraft();
+            }}
+            className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+          >
+            クリア
+          </button>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="px-5 py-5 space-y-5">
+        {draftRestored && (
+          <div className="bg-amber-50 text-amber-700 text-sm px-4 py-3 rounded-xl border border-amber-200 animate-scale-in flex items-center justify-between">
+            <p className="text-xs">前回の下書きを復元しました</p>
+            <button
+              type="button"
+              onClick={discardDraft}
+              className="text-xs font-bold text-amber-600 underline ml-3 shrink-0"
+            >
+              破棄する
+            </button>
+          </div>
+        )}
         {/* ─── お題カード (promptがある時のみ) ─── */}
         {prompt && (
           <div className="bg-white/95 rounded-2xl p-4 border border-white/30 animate-slide-up">
@@ -171,7 +290,10 @@ export default function ComposeForm({ prompt }: Props) {
               id="title"
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setDraftRestored(false);
+              }}
               placeholder="作文のタイトルを入力..."
               maxLength={50}
               className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 bg-white text-sm focus:outline-none focus:border-brand transition-all duration-200"
@@ -293,6 +415,29 @@ export default function ComposeForm({ prompt }: Props) {
                 )}
               </div>
               <div className="flex items-center gap-3">
+                {/* Undo / Redo */}
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={undo}
+                    disabled={!canUndo}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white/10 disabled:opacity-25 disabled:hover:bg-transparent transition-colors"
+                    style={{ color: "rgba(255,253,248,0.6)" }}
+                    aria-label="元に戻す"
+                  >
+                    <RotateCcw size={14} strokeWidth={2.5} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={redo}
+                    disabled={!canRedo}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white/10 disabled:opacity-25 disabled:hover:bg-transparent transition-colors"
+                    style={{ color: "rgba(255,253,248,0.6)" }}
+                    aria-label="やり直す"
+                  >
+                    <RotateCw size={14} strokeWidth={2.5} />
+                  </button>
+                </div>
                 {/* 文字数バー */}
                 <div
                   className="w-16 h-1.5 rounded-full overflow-hidden"
@@ -338,7 +483,10 @@ export default function ComposeForm({ prompt }: Props) {
               ref={textareaRef}
               id="essay"
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => {
+                handleTextChange(e.target.value);
+                setDraftRestored(false);
+              }}
               onSelect={(e) => {
                 cursorPosRef.current = (e.target as HTMLTextAreaElement).selectionStart;
               }}
@@ -371,7 +519,7 @@ export default function ComposeForm({ prompt }: Props) {
           <div className="animate-slide-up stagger-1">
             <ImageUploader
               onTextExtracted={(t) => {
-                setText(t);
+                setTextImmediate(t);
                 setInputMode("keyboard");
               }}
               onSwitchToKeyboard={() => setInputMode("keyboard")}
