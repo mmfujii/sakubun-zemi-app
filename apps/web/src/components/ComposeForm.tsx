@@ -1,54 +1,26 @@
-// 提出すると Hono /essays が Claude で添削し、結果をDB保存。
-// 成功すると /submissions/[id] へ遷移して結果を表示する。
+// 作文入力フォーム（自由作文＝prompt無し / お題＝prompt有り の両対応）。
+// 提出すると Hono /essays が Claude で添削し、結果をDB保存。成功で /submissions/[id] へ遷移。
 //
-// 意図的に除外した機能（後フェーズで実装予定）:
-//   - 音声入力（useSpeechRecognition）
-//   - Undo/Redo（useUndoRedo）
-//   - 下書きlocalStorage保存・復元
-//   - 目標字数（targetLengthMin/Max）
-//   - quota / UpgradeWall
-//   - content-safety チェック
+// V1 から移植中（コミット単位で順次。V2方針: 画像は保存しない／content-safety・child_profileは別フェーズ）:
+//   - [済] 写真OCR（写真→/ocr→本文）
+//   - [この回] タイトル / 目標字数UI / 入力方法トグル（キーボード/写真）
+//   - [予定] 写真フロー強化（複数枚プレビュー）, 目標字数の添削反映, 音声入力, Undo/Redo, 下書き保存
 
 "use client";
 
 import type { Prompt } from "@sakubun-zemi/schemas";
 import { EssaySubmitSchema } from "@sakubun-zemi/schemas";
-import { Camera, ChevronLeft, Grid3x3, Info, Loader2 } from "lucide-react";
+import { ChevronLeft, Grid3x3, Info, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Genkouyoushi from "@/components/Genkouyoushi";
+import ImageUploader from "@/components/ImageUploader";
 import { createClient } from "@/lib/supabase/client";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 const CHAR_MIN = 50;
 const CHAR_MAX = 800;
-
-// 画像を縮小して data URL を返す（長辺を maxDim に収め、JPEG で軽量化してから送信）
-async function fileToResizedDataUrl(file: File, maxDim = 1600, quality = 0.8): Promise<string> {
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error("画像の読み込みに失敗しました"));
-    reader.readAsDataURL(file);
-  });
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const i = new Image();
-    i.onload = () => resolve(i);
-    i.onerror = () => reject(new Error("画像の読み込みに失敗しました"));
-    i.src = dataUrl;
-  });
-  const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-  const w = Math.round(img.width * scale);
-  const h = Math.round(img.height * scale);
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return dataUrl; // 取れなければ原本を送る
-  ctx.drawImage(img, 0, 0, w, h);
-  return canvas.toDataURL("image/jpeg", quality);
-}
 
 type Props = {
   prompt?: Prompt | null;
@@ -58,18 +30,20 @@ export default function ComposeForm({ prompt }: Props) {
   const router = useRouter();
 
   const [text, setText] = useState("");
-  const [themeInput, setThemeInput] = useState("");
+  const [title, setTitle] = useState("");
+  const [targetLengthMin, setTargetLengthMin] = useState("");
+  const [targetLengthMax, setTargetLengthMax] = useState("");
+  const [inputMode, setInputMode] = useState<"keyboard" | "photo">("keyboard");
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [ocrLoading, setOcrLoading] = useState(false);
 
   const charCount = text.length;
   const isOverLimit = charCount > CHAR_MAX;
   const charPercent = Math.min((charCount / CHAR_MAX) * 100, 100);
 
-  // 提出に使うテーマ: お題がある時はそのタイトル、ない時は手入力
-  const resolvedTheme = prompt ? prompt.title : themeInput;
+  // 提出に使うテーマ: お題がある時はそのタイトル、自由作文はタイトル入力（未入力は「無題の作文」）
+  const resolvedTheme = prompt ? prompt.title : title.trim() || "無題の作文";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +55,7 @@ export default function ComposeForm({ prompt }: Props) {
       promptId: prompt?.id, // お題から書いた場合のみ付く（自由作文ならundefined）
     });
     if (!parsed.success) {
-      const msgs = parsed.error.errors.map((e) => e.message).join("　");
+      const msgs = parsed.error.errors.map((err) => err.message).join("　");
       setError(msgs);
       return;
     }
@@ -106,54 +80,15 @@ export default function ComposeForm({ prompt }: Props) {
       const json = await res.json();
       // 添削成功 → 結果画面へ遷移（loadingはそのまま＝画面が変わるまで提出中表示）
       router.push(`/submissions/${json.submissionId}`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "エラーが発生しました");
-      setLoading(false);
-    }
-  };
-
-  // 写真を縮小→/ocr で文字起こし→本文に反映（既存本文があれば改行して追記）
-  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    e.target.value = ""; // 同じ写真の再選択を許可するためクリア
-    if (files.length === 0) return;
-    if (files.length > 4) {
-      setError("写真は最大4枚までです");
-      return;
-    }
-
-    setError(null);
-    setOcrLoading(true);
-    try {
-      const images = await Promise.all(files.map((f) => fileToResizedDataUrl(f)));
-
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const res = await fetch(`${API_BASE}/ocr`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-        },
-        body: JSON.stringify({ images }),
-      });
-      if (!res.ok) throw new Error(`サーバーエラー: ${res.status}`);
-      const json = await res.json();
-      const ocrText: string = json.text ?? "";
-      setText((prev) => (prev.trim() ? `${prev}\n${ocrText}` : ocrText));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "文字起こしに失敗しました");
-    } finally {
-      setOcrLoading(false);
+      setError(err instanceof Error ? err.message : "エラーが発生しました");
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen animate-fade-in">
-      {/* ─── Sticky header (v1スタイル) ─── */}
+      {/* ─── Sticky header ─── */}
       <div
         className="px-5 pt-4 pb-3 flex items-center gap-3 sticky top-0 z-10"
         style={{ background: "rgba(255,253,248,0.9)", backdropFilter: "blur(8px)" }}
@@ -168,7 +103,7 @@ export default function ComposeForm({ prompt }: Props) {
           <ChevronLeft size={16} strokeWidth={2.5} color="#2f6e59" />
         </button>
         <h1 className="text-base font-bold flex-1" style={{ color: "#2f6e59" }}>
-          作文入力
+          {prompt ? "作文入力" : "自由作文"}
         </h1>
       </div>
 
@@ -192,129 +127,175 @@ export default function ComposeForm({ prompt }: Props) {
           </div>
         )}
 
-        {/* ─── テーマ入力 (自由作文時のみ表示) ─── */}
+        {/* ─── タイトル入力 (自由作文時のみ) ─── */}
         {!prompt && (
           <div className="animate-slide-up">
-            <label
-              htmlFor="theme"
-              className="text-sm font-bold block mb-2"
-              style={{ color: "#fffdf8" }}
-            >
-              テーマ
-              <span className="text-xs font-normal ml-1" style={{ color: "rgba(255,253,248,0.7)" }}>
-                必須
-              </span>
+            <label htmlFor="title" className="text-sm font-bold block mb-2" style={{ color: "#fffdf8" }}>
+              タイトル
             </label>
             <input
-              id="theme"
+              id="title"
               type="text"
-              value={themeInput}
-              onChange={(e) => setThemeInput(e.target.value)}
-              placeholder="例：わたしの好きなもの"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="作文のタイトルを入力..."
+              maxLength={50}
               className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 bg-white text-sm focus:outline-none focus:border-brand transition-all duration-200"
             />
+            <p className="text-xs mt-1 text-right" style={{ color: "rgba(255,253,248,0.6)" }}>
+              {title.length}/50
+            </p>
           </div>
         )}
 
-        {/* ─── 作文 textarea + 文字数バー ─── */}
-        <div className="animate-slide-up stagger-1">
-          <div className="flex items-center justify-between mb-2">
-            <label htmlFor="essay" className="text-sm font-bold" style={{ color: "#fffdf8" }}>
-              作文を入力
+        {/* ─── 目標字数 (自由作文時のみ・任意) ─── */}
+        {!prompt && (
+          <div className="animate-slide-up">
+            <label className="text-sm font-bold block mb-2" style={{ color: "#fffdf8" }}>
+              目標字数
+              <span className="text-xs font-normal ml-2" style={{ color: "rgba(255,253,248,0.6)" }}>
+                任意
+              </span>
             </label>
-            <div className="flex items-center gap-3">
-              {/* 文字数バー */}
-              <div
-                className="w-16 h-1.5 rounded-full overflow-hidden"
-                style={{ background: "rgba(255,255,255,0.2)" }}
-              >
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{
-                    width: `${charPercent}%`,
-                    backgroundColor: isOverLimit
-                      ? "#ef4444"
-                      : charCount >= CHAR_MIN
-                        ? "var(--color-brand-500, #2f6e59)"
-                        : "var(--color-accent-500, #f4d944)",
-                  }}
-                />
-              </div>
-              <span
-                className={`text-xs tabular-nums ${isOverLimit ? "text-red-500 font-bold" : ""}`}
-                style={isOverLimit ? undefined : { color: "rgba(255,253,248,0.5)" }}
-              >
-                <span
-                  className="font-semibold"
-                  style={
-                    charCount > 0 && !isOverLimit ? { color: "rgba(255,253,248,0.8)" } : undefined
-                  }
-                >
-                  {charCount}
-                </span>
-                <span className="mx-0.5">/</span>
-                {CHAR_MAX}
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={targetLengthMin}
+                onChange={(e) => setTargetLengthMin(e.target.value)}
+                placeholder="例: 200"
+                min={20}
+                max={800}
+                className="w-24 px-3 py-3 rounded-2xl border-2 border-gray-200 bg-white text-sm text-center focus:outline-none focus:border-brand transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <span className="text-sm" style={{ color: "rgba(255,253,248,0.7)" }}>
+                〜
+              </span>
+              <input
+                type="number"
+                value={targetLengthMax}
+                onChange={(e) => setTargetLengthMax(e.target.value)}
+                placeholder="例: 400"
+                min={20}
+                max={800}
+                className="w-24 px-3 py-3 rounded-2xl border-2 border-gray-200 bg-white text-sm text-center focus:outline-none focus:border-brand transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <span className="text-sm" style={{ color: "rgba(255,253,248,0.7)" }}>
+                字
               </span>
             </div>
-          </div>
-
-          {/* ─── 写真から入力（OCR） ─── */}
-          <div className="mb-2">
-            <input
-              id="photo"
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={handlePhotoSelect}
-              disabled={ocrLoading || loading}
-            />
-            <label
-              htmlFor="photo"
-              className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 text-sm font-bold transition-all duration-200 active:scale-[0.98] cursor-pointer ${
-                ocrLoading
-                  ? "border-white/20 bg-white/5 text-white/60"
-                  : "border-white/30 bg-white/10 text-white hover:bg-white/20"
-              }`}
-            >
-              {ocrLoading ? (
-                <>
-                  <Loader2 size={16} strokeWidth={2.5} className="animate-spin" />
-                  文字起こし中...
-                </>
-              ) : (
-                <>
-                  <Camera size={16} />
-                  写真から入力
-                </>
-              )}
-            </label>
-          </div>
-
-          <textarea
-            id="essay"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="ここに作文を入力してください..."
-            className={`w-full h-60 px-4 py-4 rounded-2xl border-2 bg-white text-sm leading-[1.8] resize-none transition-all duration-200 focus:outline-none focus:ring-0 ${
-              isOverLimit
-                ? "border-red-300 focus:border-red-400"
-                : "border-gray-200 focus:border-brand"
-            }`}
-          />
-
-          {isOverLimit && (
-            <p className="text-red-500 text-xs mt-1 font-medium animate-scale-in">
-              {CHAR_MAX}文字をこえています（{charCount - CHAR_MAX}文字オーバー）
-            </p>
-          )}
-
-          {charCount > 0 && charCount < CHAR_MIN && (
             <p className="text-xs mt-1" style={{ color: "rgba(255,253,248,0.6)" }}>
-              あと{CHAR_MIN - charCount}文字以上書いてね（最低{CHAR_MIN}文字）
+              入力すると字数に合わせた添削になります
             </p>
-          )}
+          </div>
+        )}
+
+        {/* ─── 入力方法トグル ─── */}
+        <div className="flex gap-2 animate-slide-up stagger-1">
+          <button
+            type="button"
+            onClick={() => setInputMode("keyboard")}
+            className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${
+              inputMode === "keyboard"
+                ? "bg-brand text-white"
+                : "bg-white/20 text-white/80 hover:bg-white/30"
+            }`}
+          >
+            キーボードで入力
+          </button>
+          <button
+            type="button"
+            onClick={() => setInputMode("photo")}
+            className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${
+              inputMode === "photo"
+                ? "bg-brand text-white"
+                : "bg-white/20 text-white/80 hover:bg-white/30"
+            }`}
+          >
+            写真で送る
+          </button>
         </div>
+
+        {/* ─── キーボード入力 ─── */}
+        {inputMode === "keyboard" && (
+          <div className="animate-slide-up stagger-1">
+            <div className="flex items-center justify-between mb-2">
+              <label htmlFor="essay" className="text-sm font-bold" style={{ color: "#fffdf8" }}>
+                作文を入力
+              </label>
+              <div className="flex items-center gap-3">
+                {/* 文字数バー */}
+                <div
+                  className="w-16 h-1.5 rounded-full overflow-hidden"
+                  style={{ background: "rgba(255,255,255,0.2)" }}
+                >
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${charPercent}%`,
+                      backgroundColor: isOverLimit
+                        ? "#ef4444"
+                        : charCount >= CHAR_MIN
+                          ? "var(--color-brand-500, #2f6e59)"
+                          : "var(--color-accent-500, #f4d944)",
+                    }}
+                  />
+                </div>
+                <span
+                  className={`text-xs tabular-nums ${isOverLimit ? "text-red-500 font-bold" : ""}`}
+                  style={isOverLimit ? undefined : { color: "rgba(255,253,248,0.5)" }}
+                >
+                  <span
+                    className="font-semibold"
+                    style={
+                      charCount > 0 && !isOverLimit ? { color: "rgba(255,253,248,0.8)" } : undefined
+                    }
+                  >
+                    {charCount}
+                  </span>
+                  <span className="mx-0.5">/</span>
+                  {CHAR_MAX}
+                </span>
+              </div>
+            </div>
+
+            <textarea
+              id="essay"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={prompt ? "ここに作文を入力してください..." : "自由にテーマを決めて作文を書いてみましょう..."}
+              className={`w-full h-60 px-4 py-4 rounded-2xl border-2 bg-white text-sm leading-[1.8] resize-none transition-all duration-200 focus:outline-none focus:ring-0 ${
+                isOverLimit
+                  ? "border-red-300 focus:border-red-400"
+                  : "border-gray-200 focus:border-brand"
+              }`}
+            />
+
+            {isOverLimit && (
+              <p className="text-red-500 text-xs mt-1 font-medium animate-scale-in">
+                {CHAR_MAX}文字をこえています（{charCount - CHAR_MAX}文字オーバー）
+              </p>
+            )}
+
+            {charCount > 0 && charCount < CHAR_MIN && (
+              <p className="text-xs mt-1" style={{ color: "rgba(255,253,248,0.6)" }}>
+                あと{CHAR_MIN - charCount}文字以上書いてね（最低{CHAR_MIN}文字）
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* ─── 写真で送る（OCR・ImageUploader） ─── */}
+        {inputMode === "photo" && (
+          <div className="animate-slide-up stagger-1">
+            <ImageUploader
+              onTextExtracted={(t) => {
+                setText(t);
+                setInputMode("keyboard");
+              }}
+              onSwitchToKeyboard={() => setInputMode("keyboard")}
+            />
+          </div>
+        )}
 
         {/* ─── 原稿用紙プレビュー toggle ─── */}
         {text.trim().length > 0 && (
