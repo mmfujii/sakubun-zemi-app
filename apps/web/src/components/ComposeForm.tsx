@@ -3,7 +3,6 @@
 //
 // 意図的に除外した機能（後フェーズで実装予定）:
 //   - 音声入力（useSpeechRecognition）
-//   - 写真/OCR（ImageUploader / ImagePreviewModal）
 //   - Undo/Redo（useUndoRedo）
 //   - 下書きlocalStorage保存・復元
 //   - 目標字数（targetLengthMin/Max）
@@ -14,7 +13,7 @@
 
 import type { Prompt } from "@sakubun-zemi/schemas";
 import { EssaySubmitSchema } from "@sakubun-zemi/schemas";
-import { ChevronLeft, Grid3x3, Info, Loader2 } from "lucide-react";
+import { Camera, ChevronLeft, Grid3x3, Info, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Genkouyoushi from "@/components/Genkouyoushi";
@@ -24,6 +23,32 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 const CHAR_MIN = 50;
 const CHAR_MAX = 800;
+
+// 画像を縮小して data URL を返す（長辺を maxDim に収め、JPEG で軽量化してから送信）
+async function fileToResizedDataUrl(file: File, maxDim = 1600, quality = 0.8): Promise<string> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("画像の読み込みに失敗しました"));
+    reader.readAsDataURL(file);
+  });
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error("画像の読み込みに失敗しました"));
+    i.src = dataUrl;
+  });
+  const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+  const w = Math.round(img.width * scale);
+  const h = Math.round(img.height * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return dataUrl; // 取れなければ原本を送る
+  ctx.drawImage(img, 0, 0, w, h);
+  return canvas.toDataURL("image/jpeg", quality);
+}
 
 type Props = {
   prompt?: Prompt | null;
@@ -37,6 +62,7 @@ export default function ComposeForm({ prompt }: Props) {
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ocrLoading, setOcrLoading] = useState(false);
 
   const charCount = text.length;
   const isOverLimit = charCount > CHAR_MAX;
@@ -83,6 +109,45 @@ export default function ComposeForm({ prompt }: Props) {
     } catch (e) {
       setError(e instanceof Error ? e.message : "エラーが発生しました");
       setLoading(false);
+    }
+  };
+
+  // 写真を縮小→/ocr で文字起こし→本文に反映（既存本文があれば改行して追記）
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = ""; // 同じ写真の再選択を許可するためクリア
+    if (files.length === 0) return;
+    if (files.length > 4) {
+      setError("写真は最大4枚までです");
+      return;
+    }
+
+    setError(null);
+    setOcrLoading(true);
+    try {
+      const images = await Promise.all(files.map((f) => fileToResizedDataUrl(f)));
+
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const res = await fetch(`${API_BASE}/ocr`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ images }),
+      });
+      if (!res.ok) throw new Error(`サーバーエラー: ${res.status}`);
+      const json = await res.json();
+      const ocrText: string = json.text ?? "";
+      setText((prev) => (prev.trim() ? `${prev}\n${ocrText}` : ocrText));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "文字起こしに失敗しました");
+    } finally {
+      setOcrLoading(false);
     }
   };
 
@@ -191,6 +256,39 @@ export default function ComposeForm({ prompt }: Props) {
                 {CHAR_MAX}
               </span>
             </div>
+          </div>
+
+          {/* ─── 写真から入力（OCR） ─── */}
+          <div className="mb-2">
+            <input
+              id="photo"
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handlePhotoSelect}
+              disabled={ocrLoading || loading}
+            />
+            <label
+              htmlFor="photo"
+              className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 text-sm font-bold transition-all duration-200 active:scale-[0.98] cursor-pointer ${
+                ocrLoading
+                  ? "border-white/20 bg-white/5 text-white/60"
+                  : "border-white/30 bg-white/10 text-white hover:bg-white/20"
+              }`}
+            >
+              {ocrLoading ? (
+                <>
+                  <Loader2 size={16} strokeWidth={2.5} className="animate-spin" />
+                  文字起こし中...
+                </>
+              ) : (
+                <>
+                  <Camera size={16} />
+                  写真から入力
+                </>
+              )}
+            </label>
           </div>
 
           <textarea
