@@ -1,6 +1,11 @@
 import { serve } from "@hono/node-server";
 import { zValidator } from "@hono/zod-validator";
-import { EssaySubmitSchema, OcrRequestSchema, ProfileUpdateSchema } from "@sakubun-zemi/schemas";
+import {
+  checkContentSafety,
+  EssaySubmitSchema,
+  OcrRequestSchema,
+  ProfileUpdateSchema,
+} from "@sakubun-zemi/schemas";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { getUser, getUserId } from "./auth";
@@ -237,6 +242,12 @@ app.put("/profile", zValidator("json", ProfileUpdateSchema), async (c) => {
 app.post("/essays", zValidator("json", EssaySubmitSchema), async (c) => {
   const userId = await getUserId(c); // 認証：投稿者＝ログイン中ユーザー
   const body = c.req.valid("json"); // { theme, text, promptId? }
+
+  // コンテンツ安全チェック（子ども向け。不適切表現はブロック）
+  const safety = checkContentSafety(body.text);
+  if (safety.blocked) {
+    return c.json({ error: safety.reason, code: "CONTENT_BLOCKED" }, 400);
+  }
 
   // 外部キー制約のため、ユーザーのProfile行を用意（無ければ作る）。子情報も取得して添削に使う
   const profile = await prisma.profile.upsert({

@@ -9,7 +9,7 @@
 "use client";
 
 import type { Prompt } from "@sakubun-zemi/schemas";
-import { EssaySubmitSchema } from "@sakubun-zemi/schemas";
+import { checkContentSafety, EssaySubmitSchema } from "@sakubun-zemi/schemas";
 import {
   ChevronLeft,
   Grid3x3,
@@ -197,6 +197,13 @@ export default function ComposeForm({ prompt }: Props) {
       return;
     }
 
+    // コンテンツ安全チェック（不適切表現は提出前にブロック）
+    const safety = checkContentSafety(text);
+    if (safety.blocked) {
+      setError(safety.reason ?? "この作文は添削できません");
+      return;
+    }
+
     setLoading(true);
     try {
       // ブラウザのSupabaseセッションからアクセストークンを取得して付与
@@ -213,6 +220,14 @@ export default function ComposeForm({ prompt }: Props) {
         },
         body: JSON.stringify(parsed.data),
       });
+      if (res.status === 400) {
+        const data = await res.json().catch(() => ({}));
+        if (data.code === "CONTENT_BLOCKED") {
+          setError(data.error ?? "この作文は添削できません");
+          setLoading(false);
+          return;
+        }
+      }
       if (res.status === 402) {
         // 添削の上限到達。やさしいメッセージを表示（料金ページで確認できる）
         const data = await res.json().catch(() => ({}));
