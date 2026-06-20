@@ -1,5 +1,5 @@
-import Stripe from "stripe";
 import { Hono } from "hono";
+import type Stripe from "stripe";
 import { getUser } from "./auth";
 import { prisma } from "./db";
 import { appBaseUrl, getStripe } from "./stripe";
@@ -69,7 +69,7 @@ stripeRoutes.post("/ticket-checkout", async (c) => {
   const appUrl = appBaseUrl();
 
   const sub = await prisma.subscription.findUnique({ where: { userId: user.id } });
-  if (!sub || sub.plan !== "light") {
+  if (sub?.plan !== "light") {
     return c.json({ error: "チケットはライトプラン加入者のみ購入できます" }, 403);
   }
 
@@ -119,7 +119,6 @@ stripeRoutes.post("/portal", async (c) => {
   return c.json({ url: session.url });
 });
 
-
 // Stripe Webhook（raw body＋署名検証）。サブスク状態の反映とチケット付与を行う。
 // 注意: 認証(Bearer)ではなく署名で検証する。c.req.text() で生のボディを取得する。
 stripeRoutes.post("/webhook", async (c) => {
@@ -151,7 +150,10 @@ stripeRoutes.post("/webhook", async (c) => {
       const subscription = event.data.object as Stripe.Subscription;
       const userId = subscription.metadata.user_id;
       if (!userId) {
-        console.error("[stripe webhook] subscription event missing user_id metadata", subscription.id);
+        console.error(
+          "[stripe webhook] subscription event missing user_id metadata",
+          subscription.id,
+        );
         break;
       }
       const isActive = ["active", "trialing"].includes(subscription.status);

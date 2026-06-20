@@ -7,7 +7,7 @@ import { getUser, getUserId } from "./auth";
 import { prisma } from "./db";
 import { generateFeedback } from "./feedback";
 import { ocrImages } from "./ocr";
-import { QUOTA_ENABLED, checkQuota } from "./quota";
+import { checkQuota, QUOTA_ENABLED } from "./quota";
 import { stripeRoutes } from "./stripe-routes";
 
 // AWS では ALB が /api/* をこのAPIへ振り分けるため、API自身も /api 配下で応答させる。

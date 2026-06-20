@@ -26,7 +26,9 @@ export default function UpgradeWall({ quota }: { quota: Quota }) {
             </>
           ) : (
             <>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">今月の添削回数を使い切りました</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">
+                今月の添削回数を使い切りました
+              </h2>
               <p className="text-sm text-gray-500 leading-relaxed">
                 月間{quota.limit}回の上限に達しました
                 <br />
