@@ -9,6 +9,12 @@ export const stripeRoutes = new Hono();
 // ライトプランの月間添削上限（V1の subscriptions.monthly_limit default=30 相当）
 const LIGHT_MONTHLY_LIMIT = Number.parseInt(process.env.LIGHT_MONTHLY_LIMIT ?? "30", 10);
 
+// Stripeルートで投げられた例外を必ずログに出す（原因特定用）。500はJSONで返す。
+stripeRoutes.onError((err, c) => {
+  console.error("[stripe route error]", err);
+  return c.json({ error: "決済処理に失敗しました" }, 500);
+});
+
 // ユーザーのStripe顧客IDを用意（無ければ作成して保存）
 async function ensureCustomer(userId: string, email?: string): Promise<string> {
   const stripe = getStripe();
