@@ -8,6 +8,7 @@ import { prisma } from "./db";
 import { generateFeedback } from "./feedback";
 import { ocrImages } from "./ocr";
 import { QUOTA_ENABLED, checkQuota } from "./quota";
+import { stripeRoutes } from "./stripe-routes";
 
 // AWS では ALB が /api/* をこのAPIへ振り分けるため、API自身も /api 配下で応答させる。
 // API_BASE_PATH=/api を実行時に注入（ローカルは未設定 → "/" ＝ prefix なしで従来どおり）。
@@ -333,6 +334,9 @@ app.post("/ocr", zValidator("json", OcrRequestSchema), async (c) => {
     return c.json({ error: "文字起こしに失敗しました。もう一度お試しください" }, 500);
   }
 });
+
+// Stripe（サブスク/チケット/ポータル）
+app.route("/stripe", stripeRoutes);
 
 const port = Number(process.env.PORT ?? 3001);
 serve({ fetch: app.fetch, port });
