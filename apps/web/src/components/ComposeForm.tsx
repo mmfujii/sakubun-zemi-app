@@ -213,6 +213,13 @@ export default function ComposeForm({ prompt }: Props) {
         },
         body: JSON.stringify(parsed.data),
       });
+      if (res.status === 402) {
+        // 添削の上限到達。やさしいメッセージを表示（料金ページで確認できる）
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "添削の上限に達しました。プランのアップグレードかチケットをご確認ください");
+        setLoading(false);
+        return;
+      }
       if (!res.ok) throw new Error(`サーバーエラー: ${res.status}`);
       const json = await res.json();
       // 添削成功 → 下書きを消して結果画面へ遷移
