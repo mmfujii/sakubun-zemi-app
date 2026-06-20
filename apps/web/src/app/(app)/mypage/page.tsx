@@ -153,6 +153,26 @@ export default function MyPage() {
                   </span>
                 </div>
               )}
+              {quota.plan === "light" && quota.currentPeriodEnd && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">
+                    {quota.cancelAtPeriodEnd ? "利用期限" : "次回更新日"}
+                  </span>
+                  <span className="text-sm font-semibold text-gray-800">
+                    {new Date(quota.currentPeriodEnd).toLocaleDateString("ja-JP", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      timeZone: "UTC",
+                    })}
+                  </span>
+                </div>
+              )}
+              {quota.plan === "light" && quota.cancelAtPeriodEnd && (
+                <p className="text-xs text-amber-600">
+                  解約予定です。利用期限まではご利用いただけます。
+                </p>
+              )}
               <div className="pt-2 border-t border-gray-100">
                 {quota.plan === "light" ? (
                   <button

@@ -183,6 +183,8 @@ app.get("/quota", async (c) => {
       remaining: 0,
       ticketBalance: 0,
       willUseTicket: false,
+      cancelAtPeriodEnd: false,
+      currentPeriodEnd: null,
       enabled: false,
     });
   }

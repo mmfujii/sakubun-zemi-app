@@ -9,6 +9,8 @@ export const QuotaSchema = z.object({
   remaining: z.number(),
   ticketBalance: z.number(),
   willUseTicket: z.boolean(),
+  cancelAtPeriodEnd: z.boolean(),
+  currentPeriodEnd: z.string().nullable(),
   enabled: z.boolean(),
 });
 

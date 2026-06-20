@@ -8,6 +8,8 @@ export type QuotaStatus = {
   remaining: number;
   ticketBalance: number; // チケット残枚数（lightのみ有効）
   willUseTicket: boolean; // 今回の添削でチケットを消費するか
+  cancelAtPeriodEnd: boolean; // 期末解約が予約されているか
+  currentPeriodEnd: string | null; // 課金期間の終了日(ISO)
 };
 
 // 本番(Vercel)で課金を有効化。ローカル/AWSデモは QUOTA_ENABLED=false で上限無効。
@@ -42,6 +44,8 @@ export async function checkQuota(userId: string): Promise<QuotaStatus> {
       remaining: Math.max(0, limit - used),
       ticketBalance: 0,
       willUseTicket: false,
+      cancelAtPeriodEnd: false,
+      currentPeriodEnd: null,
     };
   }
 
@@ -69,5 +73,7 @@ export async function checkQuota(userId: string): Promise<QuotaStatus> {
     remaining: monthlyRemaining,
     ticketBalance,
     willUseTicket: monthlyRemaining === 0 && ticketBalance > 0,
+    cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
+    currentPeriodEnd: sub.currentPeriodEnd ? sub.currentPeriodEnd.toISOString() : null,
   };
 }

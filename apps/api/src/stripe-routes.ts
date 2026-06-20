@@ -163,6 +163,9 @@ stripeRoutes.post("/webhook", async (c) => {
         break;
       }
       const isActive = ["active", "trialing"].includes(subscription.status);
+      // 期末解約の検出: 新しいStripe APIでは cancel_at_period_end ではなく cancel_at(日時) に入ることがある
+      const cancelScheduled =
+        (subscription.cancel_at_period_end ?? false) || subscription.cancel_at != null;
       const periodEndUnix = subscription.items.data[0]?.current_period_end ?? null;
       const currentPeriodEnd = periodEndUnix ? new Date(periodEndUnix * 1000) : null;
 
@@ -173,7 +176,7 @@ stripeRoutes.post("/webhook", async (c) => {
           plan: isActive ? "light" : "free",
           stripeSubscriptionId: subscription.id,
           currentPeriodEnd,
-          cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
+          cancelAtPeriodEnd: cancelScheduled,
           // light化する時だけ月上限を設定（freeでは据え置き）
           ...(isActive ? { monthlyLimit: LIGHT_MONTHLY_LIMIT } : {}),
         },
@@ -183,7 +186,7 @@ stripeRoutes.post("/webhook", async (c) => {
           monthlyLimit: isActive ? LIGHT_MONTHLY_LIMIT : 0,
           stripeSubscriptionId: subscription.id,
           currentPeriodEnd,
-          cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
+          cancelAtPeriodEnd: cancelScheduled,
         },
       });
       break;
