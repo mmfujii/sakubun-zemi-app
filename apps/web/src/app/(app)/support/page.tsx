@@ -66,12 +66,7 @@ export default function SupportPage() {
         </h1>
       </div>
 
-      <div
-        style={{
-          background: "linear-gradient(to bottom, #fffdf8 0px, #fffdf8 60px, transparent 60px)",
-        }}
-      >
-        <div className="px-5 py-6 space-y-5">
+      <div className="px-5 py-6 space-y-5">
           {/* FAQ */}
           <section className="animate-slide-up">
             <h2 className="text-sm font-bold mb-3" style={{ color: "#fffdf8" }}>
@@ -100,7 +95,6 @@ export default function SupportPage() {
             </h2>
             <InquiryForm />
           </section>
-        </div>
       </div>
     </div>
   );
