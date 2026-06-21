@@ -67,34 +67,34 @@ export default function SupportPage() {
       </div>
 
       <div className="px-5 py-6 space-y-5">
-          {/* FAQ */}
-          <section className="animate-slide-up">
-            <h2 className="text-sm font-bold mb-3" style={{ color: "#fffdf8" }}>
-              よくある質問
-            </h2>
-            <div className="bg-white/95 rounded-2xl border border-white/30 overflow-hidden">
-              {faqs.map((faq, i) => (
-                <div key={faq.q}>
-                  {i > 0 && <div className="border-t border-gray-100 mx-5" />}
-                  <div className="px-5 py-4">
-                    <p className="text-sm font-semibold text-gray-900 mb-1.5 flex items-start gap-2">
-                      <span className="text-brand font-bold mt-px">Q.</span>
-                      {faq.q}
-                    </p>
-                    <p className="text-sm text-gray-500 leading-relaxed pl-6">{faq.a}</p>
-                  </div>
+        {/* FAQ */}
+        <section className="animate-slide-up">
+          <h2 className="text-sm font-bold mb-3" style={{ color: "#fffdf8" }}>
+            よくある質問
+          </h2>
+          <div className="bg-white/95 rounded-2xl border border-white/30 overflow-hidden">
+            {faqs.map((faq, i) => (
+              <div key={faq.q}>
+                {i > 0 && <div className="border-t border-gray-100 mx-5" />}
+                <div className="px-5 py-4">
+                  <p className="text-sm font-semibold text-gray-900 mb-1.5 flex items-start gap-2">
+                    <span className="text-brand font-bold mt-px">Q.</span>
+                    {faq.q}
+                  </p>
+                  <p className="text-sm text-gray-500 leading-relaxed pl-6">{faq.a}</p>
                 </div>
-              ))}
-            </div>
-          </section>
+              </div>
+            ))}
+          </div>
+        </section>
 
-          {/* お問い合わせ */}
-          <section className="animate-slide-up stagger-1">
-            <h2 className="text-sm font-bold mb-3" style={{ color: "#fffdf8" }}>
-              お問い合わせ
-            </h2>
-            <InquiryForm />
-          </section>
+        {/* お問い合わせ */}
+        <section className="animate-slide-up stagger-1">
+          <h2 className="text-sm font-bold mb-3" style={{ color: "#fffdf8" }}>
+            お問い合わせ
+          </h2>
+          <InquiryForm />
+        </section>
       </div>
     </div>
   );

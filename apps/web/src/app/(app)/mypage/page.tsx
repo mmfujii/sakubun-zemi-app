@@ -1,5 +1,4 @@
-// マイページ: お子さま情報の編集 ＋ ご利用プラン（残り回数/チケット/アップグレード・解約）。
-// GET /profile・GET /quota・PUT /profile・POST /stripe/portal を Supabaseセッションのトークン付きで叩く。
+// マイページ: お子さま情報（既定は表示、編集ボタンで編集）＋ ご利用プラン＋アカウント＋各種リンク。
 "use client";
 
 import type { Quota } from "@sakubun-zemi/schemas";
@@ -13,7 +12,7 @@ import {
   UserX,
 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { LogoutButton } from "@/components/LogoutButton";
 import { createClient } from "@/lib/supabase/client";
 
@@ -27,9 +26,12 @@ export default function MyPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
+  // 編集キャンセル時に戻すための保存済み値スナップショット
+  const savedValuesRef = useRef({ childName: "", grade: "", targetSchool: "" });
 
   // 認証トークンを付けて API を叩くヘルパ
   const authHeaders = useCallback(async (): Promise<Record<string, string>> => {
@@ -56,9 +58,15 @@ export default function MyPage() {
         ]);
         if (profileRes.ok) {
           const j = await profileRes.json();
-          setChildName(j.childName ?? "");
-          setGrade(j.grade != null ? String(j.grade) : "");
-          setTargetSchool(j.targetSchool ?? "");
+          const loaded = {
+            childName: j.childName ?? "",
+            grade: j.grade != null ? String(j.grade) : "",
+            targetSchool: j.targetSchool ?? "",
+          };
+          setChildName(loaded.childName);
+          setGrade(loaded.grade);
+          setTargetSchool(loaded.targetSchool);
+          savedValuesRef.current = loaded;
         }
         if (quotaRes.ok) {
           setQuota((await quotaRes.json()) as Quota);
@@ -87,12 +95,25 @@ export default function MyPage() {
         }),
       });
       if (!res.ok) throw new Error(`保存に失敗しました（${res.status}）`);
+      savedValuesRef.current = { childName, grade, targetSchool };
       setSaved(true);
+      setEditing(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存に失敗しました");
     } finally {
       setSaving(false);
     }
+  };
+
+  // 編集をキャンセルして保存済みの値に戻す
+  const handleCancelEdit = () => {
+    const o = savedValuesRef.current;
+    setChildName(o.childName);
+    setGrade(o.grade);
+    setTargetSchool(o.targetSchool);
+    setError(null);
+    setSaved(false);
+    setEditing(false);
   };
 
   // Stripe顧客ポータル（解約・カード変更）へ遷移
@@ -115,6 +136,9 @@ export default function MyPage() {
       alert("エラーが発生しました");
     }
   };
+
+  const fieldInput =
+    "w-full px-4 py-3 rounded-2xl border-2 border-gray-200 bg-white text-sm focus:outline-none focus:border-brand transition-all duration-200";
 
   return (
     <div className="animate-fade-in px-5 py-6">
@@ -209,108 +233,145 @@ export default function MyPage() {
             </section>
           )}
 
-          <form onSubmit={handleSave} className="space-y-5">
-            <section className="bg-white rounded-2xl p-5 border border-gray-100 animate-slide-up space-y-4">
+          {/* お子さま情報（既定は表示・編集ボタンで編集） */}
+          <section className="bg-white rounded-2xl p-5 border border-gray-100 animate-slide-up space-y-4">
+            <div className="flex items-center justify-between">
               <h3
                 className="text-xs font-bold uppercase tracking-wider"
                 style={{ color: "#7a8a82" }}
               >
                 お子さま情報
               </h3>
-
-              <div>
-                <label htmlFor="childName" className="text-sm font-bold block mb-1.5 text-gray-700">
-                  名前
-                </label>
-                <input
-                  id="childName"
-                  type="text"
-                  value={childName}
-                  onChange={(e) => {
-                    setChildName(e.target.value);
+              {!editing && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditing(true);
                     setSaved(false);
+                    setError(null);
                   }}
-                  placeholder="例：たろう"
-                  maxLength={20}
-                  className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 bg-white text-sm focus:outline-none focus:border-brand transition-all duration-200"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="grade" className="text-sm font-bold block mb-1.5 text-gray-700">
-                  学年
-                </label>
-                <select
-                  id="grade"
-                  value={grade}
-                  onChange={(e) => {
-                    setGrade(e.target.value);
-                    setSaved(false);
-                  }}
-                  className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 bg-white text-sm focus:outline-none focus:border-brand transition-all duration-200"
+                  className="text-xs font-semibold text-brand-dark hover:underline"
                 >
-                  <option value="">未設定</option>
-                  {[1, 2, 3, 4, 5, 6].map((g) => (
-                    <option key={g} value={g}>
-                      小学{g}年生
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="targetSchool"
-                  className="text-sm font-bold block mb-1.5 text-gray-700"
-                >
-                  志望校
-                  <span className="text-xs font-normal ml-1 text-gray-400">任意</span>
-                </label>
-                <input
-                  id="targetSchool"
-                  type="text"
-                  value={targetSchool}
-                  onChange={(e) => {
-                    setTargetSchool(e.target.value);
-                    setSaved(false);
-                  }}
-                  placeholder="例：〇〇中学校"
-                  maxLength={50}
-                  className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 bg-white text-sm focus:outline-none focus:border-brand transition-all duration-200"
-                />
-              </div>
-            </section>
-
-            {error && (
-              <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl border border-red-100 animate-scale-in">
-                {error}
-              </div>
-            )}
-            {saved && (
-              <div className="bg-brand-light text-brand-dark text-sm px-4 py-3 rounded-xl animate-scale-in">
-                保存しました
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="w-full py-4 rounded-2xl text-white font-bold text-base disabled:opacity-40 active:scale-[0.98] transition-all duration-200"
-              style={{
-                background: "rgba(255,253,248,0.2)",
-                border: "1px solid rgba(255,253,248,0.3)",
-              }}
-            >
-              {saving ? (
-                <span className="flex items-center justify-center gap-2">
-                  <Loader2 size={18} strokeWidth={2.5} className="animate-spin" />
-                  保存中...
-                </span>
-              ) : (
-                "保存する"
+                  編集
+                </button>
               )}
-            </button>
-          </form>
+            </div>
+
+            {editing ? (
+              <form onSubmit={handleSave} className="space-y-4">
+                <div>
+                  <label
+                    htmlFor="childName"
+                    className="text-sm font-bold block mb-1.5 text-gray-700"
+                  >
+                    名前
+                  </label>
+                  <input
+                    id="childName"
+                    type="text"
+                    value={childName}
+                    onChange={(e) => setChildName(e.target.value)}
+                    placeholder="例：たろう"
+                    maxLength={20}
+                    className={fieldInput}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="grade" className="text-sm font-bold block mb-1.5 text-gray-700">
+                    学年
+                  </label>
+                  <select
+                    id="grade"
+                    value={grade}
+                    onChange={(e) => setGrade(e.target.value)}
+                    className={fieldInput}
+                  >
+                    <option value="">未設定</option>
+                    {[1, 2, 3, 4, 5, 6].map((g) => (
+                      <option key={g} value={g}>
+                        小学{g}年生
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="targetSchool"
+                    className="text-sm font-bold block mb-1.5 text-gray-700"
+                  >
+                    志望校
+                    <span className="text-xs font-normal ml-1 text-gray-400">任意</span>
+                  </label>
+                  <input
+                    id="targetSchool"
+                    type="text"
+                    value={targetSchool}
+                    onChange={(e) => setTargetSchool(e.target.value)}
+                    placeholder="例：〇〇中学校"
+                    maxLength={50}
+                    className={fieldInput}
+                  />
+                </div>
+
+                {error && (
+                  <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl border border-red-100 animate-scale-in">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    disabled={saving}
+                    className="flex-1 py-3 rounded-2xl border-2 border-gray-200 text-gray-600 font-bold text-sm hover:bg-gray-50 disabled:opacity-50 active:scale-[0.98] transition-all duration-200"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="flex-1 py-3 rounded-2xl bg-brand text-white font-bold text-sm hover:bg-brand-dark disabled:opacity-50 active:scale-[0.98] transition-all duration-200"
+                  >
+                    {saving ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 size={16} strokeWidth={2.5} className="animate-spin" />
+                        保存中...
+                      </span>
+                    ) : (
+                      "保存する"
+                    )}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">名前</span>
+                  <span className="text-sm font-semibold text-gray-800">
+                    {childName || "未設定"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">学年</span>
+                  <span className="text-sm font-semibold text-gray-800">
+                    {grade ? `小学${grade}年生` : "未設定"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">志望校</span>
+                  <span className="text-sm font-semibold text-gray-800">
+                    {targetSchool || "未設定"}
+                  </span>
+                </div>
+                {saved && (
+                  <p className="text-xs font-semibold text-brand-dark pt-1">保存しました</p>
+                )}
+              </div>
+            )}
+          </section>
 
           {/* アカウント */}
           <section className="bg-white rounded-2xl p-5 border border-gray-100 animate-slide-up">
