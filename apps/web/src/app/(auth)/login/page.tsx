@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { setAnalyticsUserId, trackEvent } from "@/lib/analytics";
 import { toJapaneseAuthError } from "@/lib/auth-error";
 import { createClient } from "@/lib/supabase/client";
 
@@ -25,7 +26,7 @@ export default function LoginPage() {
   const onSubmit = async (values: Login) => {
     setServerError(null);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: values.email,
       password: values.password,
     });
@@ -33,6 +34,8 @@ export default function LoginPage() {
       setServerError(toJapaneseAuthError(error.message));
       return;
     }
+    setAnalyticsUserId(data.user?.id ?? null);
+    trackEvent("login_completed");
     router.push("/dashboard");
     router.refresh();
   };

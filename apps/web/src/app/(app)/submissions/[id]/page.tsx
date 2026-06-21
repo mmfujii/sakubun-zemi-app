@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Genkouyoushi from "@/components/Genkouyoushi";
+import TrackPageView from "@/components/TrackPageView";
 import { getSubmission } from "@/lib/api/submission";
 import Collapsible from "./Collapsible";
 
@@ -64,6 +65,7 @@ function ResultContent({ data }: { data: SubmissionDetail }) {
 
   return (
     <div className="animate-fade-in">
+      <TrackPageView event="result_viewed" />
       {/* Sticky header */}
       <div
         className="px-5 pt-4 pb-3 flex items-center gap-3 sticky top-0 z-10"

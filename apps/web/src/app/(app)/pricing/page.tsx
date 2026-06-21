@@ -1,6 +1,7 @@
 import { Check, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import CheckoutButton from "@/components/CheckoutButton";
+import TrackPageView from "@/components/TrackPageView";
 import { getQuota } from "@/lib/api/quota";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +12,7 @@ export default async function PricingPage() {
 
   return (
     <div className="min-h-screen animate-fade-in">
+      <TrackPageView event="subscription_page_viewed" />
       <div
         className="px-5 pt-4 pb-3 flex items-center gap-3 sticky top-0 z-10"
         style={{ background: "rgba(255,253,248,0.9)", backdropFilter: "blur(8px)" }}

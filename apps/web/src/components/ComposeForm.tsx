@@ -26,6 +26,7 @@ import Genkouyoushi from "@/components/Genkouyoushi";
 import ImageUploader from "@/components/ImageUploader";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useUndoRedo } from "@/hooks/useUndoRedo";
+import { trackEvent } from "@/lib/analytics";
 import { createClient } from "@/lib/supabase/client";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -212,6 +213,8 @@ export default function ComposeForm({ prompt }: Props) {
         data: { session },
       } = await supabase.auth.getSession();
 
+      const startedAt = Date.now();
+      trackEvent("grading_started");
       const res = await fetch(`${API_BASE}/essays`, {
         method: "POST",
         headers: {
@@ -240,10 +243,12 @@ export default function ComposeForm({ prompt }: Props) {
       if (!res.ok) throw new Error(`サーバーエラー: ${res.status}`);
       const json = await res.json();
       // 添削成功 → 下書きを消して結果画面へ遷移
+      trackEvent("grading_succeeded", { duration_ms: Date.now() - startedAt });
       clearDraft();
       setNavigating(true);
       router.push(`/submissions/${json.submissionId}`);
     } catch (err) {
+      trackEvent("grading_failed");
       setError(err instanceof Error ? err.message : "エラーが発生しました");
       setLoading(false);
     }

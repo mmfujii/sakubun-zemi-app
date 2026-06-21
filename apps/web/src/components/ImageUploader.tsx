@@ -23,6 +23,7 @@ import {
   Upload,
 } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 import { createClient } from "@/lib/supabase/client";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -439,6 +440,8 @@ export default function ImageUploader({ onTextExtracted, onSwitchToKeyboard }: I
     if (!currentFile) return;
     setPhase("loading");
     setError(null);
+    const startedAt = Date.now();
+    trackEvent("ocr_started", { input_method: "photo" });
 
     try {
       const ocrImage = await processImageForOCR(currentFile, rotation, quality);
@@ -476,8 +479,10 @@ export default function ImageUploader({ onTextExtracted, onSwitchToKeyboard }: I
       setCurrentFile(null);
       setPreview(null);
       setPhase("result");
+      trackEvent("ocr_succeeded", { input_method: "photo", duration_ms: Date.now() - startedAt });
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
+      trackEvent("ocr_failed", { input_method: "photo", error_code: "OCR_ERROR" });
       setRetryCount((c) => c + 1);
       setPhase("rotate");
     }

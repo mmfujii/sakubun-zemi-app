@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 import { createClient } from "@/lib/supabase/client";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -10,6 +11,7 @@ export default function CheckoutButton() {
 
   const handleCheckout = async () => {
     setLoading(true);
+    trackEvent("subscription_started");
     try {
       const supabase = createClient();
       const {

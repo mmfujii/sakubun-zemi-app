@@ -6,6 +6,7 @@ import { Loader2, Mail, Pen } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { setAnalyticsUserId, trackEvent } from "@/lib/analytics";
 import { toJapaneseAuthError } from "@/lib/auth-error";
 import { createClient } from "@/lib/supabase/client";
 
@@ -26,7 +27,7 @@ export default function SignupPage() {
     setServerError(null);
     const supabase = createClient();
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
       options: {
@@ -39,6 +40,8 @@ export default function SignupPage() {
       return;
     }
 
+    setAnalyticsUserId(data.user?.id ?? null);
+    trackEvent("signup_completed", { signup_method: "email" });
     setSentEmail(values.email);
     setEmailSent(true);
   };
