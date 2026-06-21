@@ -3,7 +3,15 @@
 "use client";
 
 import type { Quota } from "@sakubun-zemi/schemas";
-import { ChevronRight, ClipboardList, FileText, Loader2, Shield, UserX } from "lucide-react";
+import {
+  ChevronRight,
+  ClipboardList,
+  FileText,
+  HelpCircle,
+  Loader2,
+  Shield,
+  UserX,
+} from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { LogoutButton } from "@/components/LogoutButton";
@@ -321,6 +329,11 @@ export default function MyPage() {
           {/* リンク一覧 */}
           <section className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-slide-up">
             {[
+              {
+                href: "/support",
+                label: "サポート・よくある質問",
+                icon: <HelpCircle size={16} stroke="#2f6e59" />,
+              },
               {
                 href: "/terms",
                 label: "利用規約",

@@ -3,6 +3,7 @@ export * from "./content-safety";
 export * from "./dashboard";
 export * from "./essay";
 export * from "./history";
+export * from "./inquiry";
 export * from "./ocr";
 export * from "./profile";
 export * from "./prompts";

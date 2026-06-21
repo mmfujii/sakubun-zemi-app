@@ -3,6 +3,7 @@ import { zValidator } from "@hono/zod-validator";
 import {
   checkContentSafety,
   EssaySubmitSchema,
+  InquiryCreateSchema,
   OcrRequestSchema,
   ProfileUpdateSchema,
 } from "@sakubun-zemi/schemas";
@@ -347,6 +348,21 @@ app.post("/ocr", zValidator("json", OcrRequestSchema), async (c) => {
     console.error("OCRに失敗:", e);
     return c.json({ error: "文字起こしに失敗しました。もう一度お試しください" }, 500);
   }
+});
+
+// お問い合わせを作成（ログインユーザーのメールを保存）
+app.post("/inquiries", zValidator("json", InquiryCreateSchema), async (c) => {
+  const user = await getUser(c);
+  const body = c.req.valid("json");
+  await prisma.inquiry.create({
+    data: {
+      userId: user.id,
+      email: user.email ?? "",
+      subject: body.subject,
+      message: body.message,
+    },
+  });
+  return c.json({ success: true });
 });
 
 // アカウント削除（退会）: Stripeサブスク解約 → 関連データ削除 → Supabase Authユーザー削除
