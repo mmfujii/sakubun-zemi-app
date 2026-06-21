@@ -11,15 +11,17 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
+    "@sakubun-zemi/api": "workspace:*",
     "@sakubun-zemi/schemas": "workspace:*",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.4",
+    "@tanstack/react-query": "^5.62.0",
+    "hono": "^4.6.14",
+    "lucide-react": "^1.7.0",
     "next": "15.1.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-hook-form": "^7.77.0",
-    "lucide-react": "^1.7.0",
-    "@tanstack/react-query": "^5.62.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {

@@ -8,6 +8,8 @@ import Script from "next/script";
 export default function GoogleAnalyticsScript() {
   const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
   if (!measurementId) return null;
+  // 開発時は DebugView に出すため debug_mode を有効化
+  const debug = process.env.NODE_ENV !== "production";
 
   return (
     <>
@@ -20,7 +22,7 @@ export default function GoogleAnalyticsScript() {
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', '${measurementId}');
+          gtag('config', '${measurementId}'${debug ? ", { debug_mode: true }" : ""});
         `}
       </Script>
     </>
