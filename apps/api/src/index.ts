@@ -19,6 +19,15 @@ import { stripeRoutes } from "./stripe-routes";
 
 // AWS では ALB が /api/* をこのAPIへ振り分けるため、API自身も /api 配下で応答させる。
 // API_BASE_PATH=/api を実行時に注入（ローカルは未設定 → "/" ＝ prefix なしで従来どおり）。
+// 障害ログ用にエラーを短い正規化コードへ（生メッセージは保存しない）
+function normalizeError(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (msg.includes("max_tokens") || msg.includes("トークン上限")) return "MAX_TOKENS";
+  if (msg.includes("JSON") || msg.includes("抽出")) return "PARSE_ERROR";
+  if (msg.includes("テキストが含まれて")) return "NO_TEXT";
+  return "UNKNOWN";
+}
+
 const app = new Hono().basePath(process.env.API_BASE_PATH ?? "/");
 
 // CORS 許可オリジン。ローカルは localhost:3000、AWS は同一オリジン（ALB）なので
@@ -331,6 +340,16 @@ app.post("/essays", zValidator("json", EssaySubmitSchema), async (c) => {
       where: { id: submission.id },
       data: { status: "error" },
     });
+    await prisma.failureLog
+      .create({
+        data: {
+          userId,
+          eventType: "grading_failed",
+          errorCode: normalizeError(e),
+          inputMethod: null,
+        },
+      })
+      .catch(() => {});
     return c.json({ error: "添削の生成に失敗しました。もう一度お試しください" }, 500);
   }
 });
@@ -338,7 +357,7 @@ app.post("/essays", zValidator("json", EssaySubmitSchema), async (c) => {
 // 写真をClaude visionで文字起こしして返す（画像は保存しない＝メモリ処理のみ）。
 // フロントは返ってきた text を編集してから /essays に提出する。
 app.post("/ocr", zValidator("json", OcrRequestSchema), async (c) => {
-  await getUserId(c); // 認証：ログイン中ユーザーのみ
+  const userId = await getUserId(c); // 認証：ログイン中ユーザーのみ
   const { images } = c.req.valid("json");
 
   try {
@@ -346,6 +365,16 @@ app.post("/ocr", zValidator("json", OcrRequestSchema), async (c) => {
     return c.json({ text });
   } catch (e) {
     console.error("OCRに失敗:", e);
+    await prisma.failureLog
+      .create({
+        data: {
+          userId,
+          eventType: "ocr_failed",
+          errorCode: normalizeError(e),
+          inputMethod: "photo",
+        },
+      })
+      .catch(() => {});
     return c.json({ error: "文字起こしに失敗しました。もう一度お試しください" }, 500);
   }
 });

@@ -78,3 +78,12 @@ model Inquiry {
   status    String   @default("open") // open | resolved
   createdAt DateTime @default(now())
 }
+
+model FailureLog {
+  id          String   @id @default(uuid())
+  userId      String? // 失敗したユーザー(任意)
+  eventType   String // ocr_failed | grading_failed
+  errorCode   String // 正規化コードのみ(生メッセージは保存しない)
+  inputMethod String? // photo | keyboard 等
+  createdAt   DateTime @default(now())
+}

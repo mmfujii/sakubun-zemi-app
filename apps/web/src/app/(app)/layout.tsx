@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import AnalyticsIdentify from "@/components/AnalyticsIdentify";
 import AppHeader from "@/components/AppHeader";
 import AppNav from "@/components/AppNav";
 import { createClient } from "@/lib/supabase/server";
@@ -22,6 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       }}
     >
       {/* PC: 左サイドナビ / モバイル: 下部固定ナビ */}
+      <AnalyticsIdentify userId={user.id} />
       <AppNav />
       {/* コンテンツエリア */}
       <main className="flex-1 pb-20 lg:pb-0">
