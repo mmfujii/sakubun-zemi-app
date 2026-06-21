@@ -13,6 +13,7 @@ import { prisma } from "./db";
 import { generateFeedback } from "./feedback";
 import { ocrImages } from "./ocr";
 import { checkQuota, QUOTA_ENABLED } from "./quota";
+import { getStripe, STRIPE_ENABLED } from "./stripe";
 import { stripeRoutes } from "./stripe-routes";
 
 // AWS では ALB が /api/* をこのAPIへ振り分けるため、API自身も /api 配下で応答させる。
@@ -345,6 +346,50 @@ app.post("/ocr", zValidator("json", OcrRequestSchema), async (c) => {
   } catch (e) {
     console.error("OCRに失敗:", e);
     return c.json({ error: "文字起こしに失敗しました。もう一度お試しください" }, 500);
+  }
+});
+
+// アカウント削除（退会）: Stripeサブスク解約 → 関連データ削除 → Supabase Authユーザー削除
+app.post("/account/delete", async (c) => {
+  const userId = await getUserId(c);
+  try {
+    // 1. Stripeサブスクをキャンセル（あれば）
+    const sub = await prisma.subscription.findUnique({ where: { userId } });
+    if (sub?.stripeSubscriptionId && STRIPE_ENABLED) {
+      try {
+        await getStripe().subscriptions.cancel(sub.stripeSubscriptionId);
+      } catch (e) {
+        console.warn("退会: Stripe解約をスキップ:", e);
+      }
+    }
+
+    // 2. 関連データ削除（Feedbackは Submission の onDelete: Cascade で消える）
+    await prisma.submission.deleteMany({ where: { userId } });
+    await prisma.subscription.deleteMany({ where: { userId } });
+    await prisma.profile.deleteMany({ where: { id: userId } });
+
+    // 3. Supabase Auth のユーザーを削除（service role が必要）
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseUrl = process.env.SUPABASE_URL;
+    if (!serviceKey || !supabaseUrl) {
+      return c.json(
+        { error: "退会処理の設定が未完了です（SUPABASE_SERVICE_ROLE_KEY 未設定）" },
+        500,
+      );
+    }
+    const res = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
+      method: "DELETE",
+      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+    });
+    if (!res.ok) {
+      console.error("退会: Authユーザー削除に失敗", res.status, await res.text().catch(() => ""));
+      return c.json({ error: "アカウントの削除に失敗しました" }, 500);
+    }
+
+    return c.json({ success: true });
+  } catch (e) {
+    console.error("退会: 失敗", e);
+    return c.json({ error: "アカウントの削除に失敗しました" }, 500);
   }
 });
 

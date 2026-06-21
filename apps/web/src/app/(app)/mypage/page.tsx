@@ -3,7 +3,7 @@
 "use client";
 
 import type { Quota } from "@sakubun-zemi/schemas";
-import { Loader2 } from "lucide-react";
+import { ChevronRight, ClipboardList, FileText, Loader2, Shield, UserX } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { LogoutButton } from "@/components/LogoutButton";
@@ -21,6 +21,7 @@ export default function MyPage() {
   const [saved, setSaved] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
 
   // 認証トークンを付けて API を叩くヘルパ
   const authHeaders = useCallback(async (): Promise<Record<string, string>> => {
@@ -36,6 +37,11 @@ export default function MyPage() {
     (async () => {
       try {
         const headers = await authHeaders();
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        setEmail(user?.email ?? "");
         const [profileRes, quotaRes] = await Promise.all([
           fetch(`${API_BASE}/profile`, { headers }),
           fetch(`${API_BASE}/quota`, { headers }),
@@ -296,11 +302,71 @@ export default function MyPage() {
                 "保存する"
               )}
             </button>
-
-            <div className="flex justify-center pt-2">
-              <LogoutButton />
-            </div>
           </form>
+
+          {/* アカウント */}
+          <section className="bg-white rounded-2xl p-5 border border-gray-100 animate-slide-up">
+            <h3
+              className="text-xs font-bold uppercase tracking-wider mb-3"
+              style={{ color: "#7a8a82" }}
+            >
+              アカウント
+            </h3>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">メールアドレス</span>
+              <span className="text-sm font-semibold text-gray-800 truncate ml-4">{email}</span>
+            </div>
+          </section>
+
+          {/* リンク一覧 */}
+          <section className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-slide-up">
+            {[
+              {
+                href: "/terms",
+                label: "利用規約",
+                icon: <FileText size={16} stroke="#2f6e59" />,
+              },
+              {
+                href: "/privacy",
+                label: "プライバシーポリシー",
+                icon: <Shield size={16} stroke="#2f6e59" />,
+              },
+              {
+                href: "/legal",
+                label: "特定商取引法に基づく表記",
+                icon: <ClipboardList size={16} stroke="#2f6e59" />,
+              },
+              {
+                href: "/withdraw",
+                label: "退会について",
+                icon: <UserX size={16} stroke="#2f6e59" />,
+              },
+            ].map((item, i) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors ${
+                  i > 0 ? "border-t border-gray-100" : ""
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center"
+                    style={{ background: "#e8f0ea" }}
+                  >
+                    {item.icon}
+                  </div>
+                  <span className="text-sm font-medium text-gray-800">{item.label}</span>
+                </div>
+                <ChevronRight size={16} stroke="#b0c4b8" />
+              </Link>
+            ))}
+          </section>
+
+          {/* ログアウト */}
+          <div className="flex justify-center pt-2">
+            <LogoutButton />
+          </div>
         </div>
       )}
     </div>
