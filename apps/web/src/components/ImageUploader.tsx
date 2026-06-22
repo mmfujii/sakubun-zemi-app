@@ -745,16 +745,16 @@ export default function ImageUploader({ onTextExtracted, onSwitchToKeyboard }: I
   // ===== Phase: result =====
   if (phase === "result" && pages.length > 0) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 rounded-2xl bg-white p-4 shadow-sm">
         <div className="bg-amber-50 text-amber-800 text-sm px-4 py-3 rounded-xl border border-amber-200 animate-scale-in">
-          <p className="font-semibold mb-1">読み取り結果を確認してください</p>
+          <p className="font-semibold mb-1">読み取った文章を確認してください</p>
           <p className="text-xs leading-relaxed">
-            自動読み取りは完璧ではありません。
+            手書きのため、ときどき読み間違いがあります。
             <span className="font-bold">
-              お子さまの原稿と見比べて、違うところがあれば直してください。
+              写真と見比べて、違うところを直してから添削に進んでください。
             </span>
             <br />
-            段落の区切りでEnterキーを押して改行を入れてください。
+            正確なテキストほど、添削も正確になります。段落の区切りはEnterキーで改行できます。
           </p>
         </div>
 
@@ -809,7 +809,7 @@ export default function ImageUploader({ onTextExtracted, onSwitchToKeyboard }: I
           <textarea
             value={combinedText}
             onChange={(e) => setCombinedText(e.target.value)}
-            className="w-full h-48 px-4 py-3 rounded-xl border-2 border-gray-200 bg-white text-sm leading-[1.8] resize-none focus:outline-none focus:border-brand transition-colors"
+            className="w-full h-48 px-4 py-3 rounded-xl border-2 border-gray-200 bg-gray-50 text-gray-900 text-sm leading-[1.8] resize-none focus:outline-none focus:border-brand transition-colors"
           />
           <p className="text-xs text-gray-400">
             写真と見比べて、違う文字や抜けている部分があれば修正してください
@@ -889,7 +889,9 @@ export default function ImageUploader({ onTextExtracted, onSwitchToKeyboard }: I
             <span>影が入らないように</span>
           </div>
         </div>
-        <p className="text-xs mt-2 text-amber-600">※ 読み取り後、内容を確認・修正できます</p>
+        <p className="text-xs mt-2 text-amber-600">
+          ※ 読み取った文字は、あとで確認・修正できます
+        </p>
       </div>
 
       <button
