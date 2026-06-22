@@ -25,7 +25,7 @@ type GenkouyoushiProps = {
   name?: string;
   minCols?: number;
   compact?: boolean;
-  /** 1枚あたりのカラム数（デフォルト20=400字） */
+  /** 互換用（現在は未使用）。全列を1本の連続スクロールで表示する。 */
   colsPerPage?: number;
 };
 
@@ -175,7 +175,7 @@ function buildColumns(
   let i = 0;
   let paragraphIndent = true;
 
-  while (i < chars.length && bodyColumns.length < 30) {
+  while (i < chars.length && bodyColumns.length < 60) {
     const colChars: string[] = [];
     const startRow = paragraphIndent ? 1 : 0;
 
@@ -217,7 +217,7 @@ function buildColumns(
   return columns;
 }
 
-/** 1枚の原稿用紙コンポーネント */
+/** 原稿用紙本体（全列を1つの横スクロールで表示） */
 function GenkouyoushiPage({
   columns,
   cellClass,
@@ -271,7 +271,6 @@ export default function Genkouyoushi({
   name,
   minCols = 20,
   compact = false,
-  colsPerPage = 20,
 }: GenkouyoushiProps) {
   const allColumns = useMemo(
     () => buildColumns(text, title, name, minCols),
@@ -282,40 +281,8 @@ export default function Genkouyoushi({
   const cellClass = compact ? "gk-cell-sm" : "gk-cell";
   const cellPx = compact ? 24 : 32;
   const scrollRef = useRef<HTMLDivElement>(null);
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  // メタ列（タイトル・名前）と本文列を分離
-  const metaColumns = allColumns.filter((c) => c.type === "title" || c.type === "name");
-  const bodyColumns = allColumns.filter((c) => c.type === "body");
-
-  // 本文を colsPerPage ごとにページ分割
-  const pages: ColumnData[][] = [];
-  if (bodyColumns.length <= colsPerPage) {
-    // 1枚に収まる場合: メタ列 + 本文
-    pages.push([...metaColumns, ...bodyColumns]);
-  } else {
-    // 複数枚: 1枚目にメタ列 + 最初のcolsPerPage列、2枚目以降は本文のみ
-    for (let i = 0; i < bodyColumns.length; i += colsPerPage) {
-      const pageCols = bodyColumns.slice(i, i + colsPerPage);
-      // 足りない列を空列で埋める
-      while (pageCols.length < colsPerPage) {
-        const emptyCells: CellData[] = Array.from({ length: ROWS }, () => ({
-          char: "",
-          isPunct: false,
-          isEmpty: true,
-        }));
-        pageCols.push({ cells: emptyCells, type: "body" });
-      }
-      if (i === 0) {
-        pages.push([...metaColumns, ...pageCols]);
-      } else {
-        pages.push(pageCols);
-      }
-    }
-  }
-
-  const isMultiPage = pages.length > 1;
-
+  // 読みは右から。マウント時／列変更時に右端へスクロールして冒頭を表示。
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll to right when columns change
   useEffect(() => {
     const el = scrollRef.current;
@@ -324,91 +291,18 @@ export default function Genkouyoushi({
     }
   }, [allColumns]);
 
-  // Prevent swipe-back navigation when scrolling horizontally
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!touchStartRef.current) return;
-
-      const touch = e.touches[0];
-      const dx = Math.abs(touch.clientX - touchStartRef.current.x);
-      const dy = Math.abs(touch.clientY - touchStartRef.current.y);
-
-      // 明確に横スクロール（横が縦の3倍以上）かつスクロール可能な場合のみ抑制
-      const canScrollH = el.scrollWidth > el.clientWidth;
-      if (canScrollH && dx > dy * 3 && dx > 15) {
-        e.preventDefault();
-      }
-    };
-
-    el.addEventListener("touchstart", handleTouchStart, { passive: true });
-    el.addEventListener("touchmove", handleTouchMove, { passive: false });
-
-    return () => {
-      el.removeEventListener("touchstart", handleTouchStart);
-      el.removeEventListener("touchmove", handleTouchMove);
-    };
-  }, []);
-
-  // 1枚の場合は従来通り
-  if (!isMultiPage) {
-    return (
-      <div className="gk-wrapper">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-medium text-gray-400">原稿用紙</span>
-          <span className="text-xs text-gray-400 tabular-nums">{charCount}字</span>
-        </div>
-        <GenkouyoushiPage
-          columns={pages[0]}
-          cellClass={cellClass}
-          cellPx={cellPx}
-          scrollRef={scrollRef}
-        />
-      </div>
-    );
-  }
-
-  // 複数枚: 横スクロールでページを並べる
   return (
     <div className="gk-wrapper">
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-medium text-gray-400">原稿用紙</span>
         <span className="text-xs text-gray-400 tabular-nums">{charCount}字</span>
       </div>
-      <div
-        ref={scrollRef}
-        className="flex flex-row-reverse gap-4 overflow-x-auto snap-x snap-mandatory pb-2"
-        style={{ scrollSnapType: "x mandatory" }}
-      >
-        {pages.map((pageCols, pageIdx) => (
-          <div
-            // biome-ignore lint/suspicious/noArrayIndexKey: 原稿用紙のページ位置=識別子。並び替わらないためindexで可
-            key={pageIdx}
-            className="flex-shrink-0 snap-center"
-            style={{ minWidth: "min(100%, 600px)" }}
-          >
-            <div className="text-center mb-2">
-              <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                {pageIdx + 1}枚目
-              </span>
-            </div>
-            <GenkouyoushiPage columns={pageCols} cellClass={cellClass} cellPx={cellPx} />
-          </div>
-        ))}
-      </div>
-      <div className="flex justify-center gap-1.5 mt-2">
-        {pages.map((_, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: 固定数のページ送りドット。並び替わらず安定IDも無いためindexで可
-          <div key={i} className="w-1.5 h-1.5 rounded-full bg-gray-300" />
-        ))}
-      </div>
+      <GenkouyoushiPage
+        columns={allColumns}
+        cellClass={cellClass}
+        cellPx={cellPx}
+        scrollRef={scrollRef}
+      />
     </div>
   );
 }
