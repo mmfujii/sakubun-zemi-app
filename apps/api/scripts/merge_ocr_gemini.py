@@ -49,9 +49,10 @@ db = requests.post(
 db.raise_for_status()
 docai_text = db.json().get("document", {}).get("text", "").strip()
 
-# 指示文は ocr-eval/prompt.txt から読む（プロンプト実験はこのファイルを編集する）。
-prompt_path = os.path.join(EVAL_DIR, "prompt.txt")
+# 指示文は ocr-eval/prompt.txt から読む。第2引数でプロンプトファイルを差し替えられる（比較用）。
+prompt_path = sys.argv[2] if len(sys.argv) > 2 else os.path.join(EVAL_DIR, "prompt.txt")
 instruction = open(prompt_path, encoding="utf-8").read().strip()
+print(f"[prompt: {os.path.basename(prompt_path)}]")
 prompt = (
     f"{instruction}\n\n"
     f"OCR下書きA (Cloud Vision):\n---\n{vision_text}\n---\n\n"
