@@ -145,3 +145,4 @@ vite.config.ts.timestamp-*
 # turbo cache & temp junk
 .turbo/
 _tmp_*
+.vercel
