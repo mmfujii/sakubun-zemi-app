@@ -69,3 +69,5 @@
 - `apps/api/scripts/ocr-eval/`: `ground_truth.txt`＋`prompt.txt`/`prompt_baseline.txt`＋自動スコア比較。
 - `scripts/merge_ocr_gemini.py`（第2引数でプロンプト差替・一致率表示）、各エンジン検証スクリプト、`dewarp-tool.html`。
 - **プロンプト改良は必ずこのハーネスでスコア比較してから本番反映する運用。**
+
+<!-- redeploy: OCR maxOutputTokens fix を本番反映 -->
