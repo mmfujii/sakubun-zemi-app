@@ -21,7 +21,14 @@
     "NEXT_PUBLIC_API_URL",
     "API_URL",
     "WEB_APP_URL",
-    "CORS_ORIGIN"
+    "CORS_ORIGIN",
+    "CLOUD_VISION_API_KEY",
+    "GEMINI_API_KEY",
+    "GEMINI_OCR_MODEL",
+    "DOCAI_PROJECT",
+    "DOCAI_PROCESSOR_ID",
+    "DOCAI_LOCATION",
+    "GCP_SERVICE_ACCOUNT_JSON"
   ],
   "tasks": {
     "build": {

@@ -10,7 +10,7 @@
 //   cd apps/api
 //   VISION_API_KEY=xxxx node scripts/cloud-vision-test.mjs ~/Documents/Claude/Projects/sakubunn/IMG_7140.jpg
 
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const apiKey = process.env.VISION_API_KEY || process.env.GEMINI_API_KEY;
 if (!apiKey) {

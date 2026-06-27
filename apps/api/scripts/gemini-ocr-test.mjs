@@ -8,7 +8,7 @@
 // モデル名は変わるので必要なら GEMINI_MODEL で上書き（既定: gemini-2.5-pro）。
 // ※ これはAI Studio経路（検証用）。本番は Vertex AI 経由を推奨。
 
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
@@ -24,7 +24,11 @@ if (!imgPath || !existsSync(imgPath)) {
 }
 
 const ext = imgPath.toLowerCase();
-const mime = ext.endsWith(".png") ? "image/png" : ext.endsWith(".webp") ? "image/webp" : "image/jpeg";
+const mime = ext.endsWith(".png")
+  ? "image/png"
+  : ext.endsWith(".webp")
+    ? "image/webp"
+    : "image/jpeg";
 const data = readFileSync(imgPath).toString("base64");
 
 // ocr.ts と同じ方針の verbatim プロンプト
@@ -61,8 +65,7 @@ if (!res.ok) {
 }
 
 const json = await res.json();
-const text =
-  json?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ?? "(テキストなし)";
+const text = json?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ?? "(テキストなし)";
 
 console.log(`モデル: ${model}\n画像: ${imgPath}\n`);
 console.log("==================== Gemini 読み取り結果 ====================\n");

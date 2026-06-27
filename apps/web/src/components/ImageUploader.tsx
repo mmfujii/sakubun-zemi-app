@@ -889,9 +889,7 @@ export default function ImageUploader({ onTextExtracted, onSwitchToKeyboard }: I
             <span>影が入らないように</span>
           </div>
         </div>
-        <p className="text-xs mt-2 text-amber-600">
-          ※ 読み取った文字は、あとで確認・修正できます
-        </p>
+        <p className="text-xs mt-2 text-amber-600">※ 読み取った文字は、あとで確認・修正できます</p>
       </div>
 
       <button

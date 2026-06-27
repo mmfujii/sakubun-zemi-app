@@ -149,7 +149,8 @@ async function geminiMerge(
       temperature: 0,
       // proは検証時と同じ“動的思考”に戻す（思考を絞ると言い換えが増えるため）。
       // 出力枠を広く取り、思考＋本文が詰まって空にならないようにする。
-      maxOutputTokens: isFlash ? 4096 : 16000,
+      // pro は思考(thinking)が出力枠を食うため上限まで広げる（MAX_TOKENSで空になるのを防ぐ）。
+      maxOutputTokens: isFlash ? 4096 : 65536,
       ...(isFlash ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
     },
   });
@@ -185,7 +186,9 @@ export async function ocrImages(images: string[]): Promise<string> {
     if (!visionText && !docaiText) throw new Error("VISION_NO_TEXT");
     const corrected = await geminiMerge(media, data, visionText, docaiText);
     if (looksDegenerate(corrected)) {
-      throw new Error("文字をうまく読み取れませんでした。撮り直すか、キーボード入力でお試しください。");
+      throw new Error(
+        "文字をうまく読み取れませんでした。撮り直すか、キーボード入力でお試しください。",
+      );
     }
     pages.push(corrected);
   }

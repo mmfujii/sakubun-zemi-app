@@ -5,9 +5,9 @@
 //   cd apps/api
 //   VISION_API_KEY=xxxx node scripts/vision-cleanup-pipeline.mjs ~/Documents/Claude/Projects/sakubunn/IMG_7140.jpg
 
-import { readFileSync, existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import Anthropic from "@anthropic-ai/sdk";
 
 const here = dirname(fileURLToPath(import.meta.url));

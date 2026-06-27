@@ -8,9 +8,9 @@
 // ※ 本番アプリは画像をクライアント側で強調処理してから送ります。
 //   このスクリプトは生画像で「プロンプトの違い」だけを比較する簡易版です。
 
-import { readFileSync, existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import Anthropic from "@anthropic-ai/sdk";
 
 // --- .env から ANTHROPIC_API_KEY を雑にロード（dotenv不要） ---
@@ -65,7 +65,11 @@ const NEW_PROMPT = `あなたは小中学生の手書き作文を文字起こし
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const ext = imgPath.toLowerCase();
-const media = ext.endsWith(".png") ? "image/png" : ext.endsWith(".webp") ? "image/webp" : "image/jpeg";
+const media = ext.endsWith(".png")
+  ? "image/png"
+  : ext.endsWith(".webp")
+    ? "image/webp"
+    : "image/jpeg";
 const data = readFileSync(imgPath).toString("base64");
 
 async function run(system) {
@@ -79,7 +83,10 @@ async function run(system) {
         role: "user",
         content: [
           { type: "image", source: { type: "base64", media_type: media, data } },
-          { type: "text", text: "この画像に書かれている作文を、ルールに従って文字起こししてください。" },
+          {
+            type: "text",
+            text: "この画像に書かれている作文を、ルールに従って文字起こししてください。",
+          },
         ],
       },
     ],

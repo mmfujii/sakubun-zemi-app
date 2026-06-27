@@ -17,14 +17,18 @@
 //   DOCAI_PROCESSOR_ID=xxxxxxxxxxxx \
 //   node scripts/docai-test.mjs ~/Documents/Claude/Projects/sakubunn/IMG_7140.jpg
 
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const token = process.env.DOCAI_TOKEN;
 const project = process.env.DOCAI_PROJECT;
 const location = process.env.DOCAI_LOCATION || "us";
 const processorId = process.env.DOCAI_PROCESSOR_ID;
 
-for (const [k, v] of Object.entries({ DOCAI_TOKEN: token, DOCAI_PROJECT: project, DOCAI_PROCESSOR_ID: processorId })) {
+for (const [k, v] of Object.entries({
+  DOCAI_TOKEN: token,
+  DOCAI_PROJECT: project,
+  DOCAI_PROCESSOR_ID: processorId,
+})) {
   if (!v) {
     console.error(`${k} を指定してください。`);
     process.exit(1);
@@ -38,7 +42,11 @@ if (!imgPath || !existsSync(imgPath)) {
 }
 
 const ext = imgPath.toLowerCase();
-const mime = ext.endsWith(".png") ? "image/png" : ext.endsWith(".webp") ? "image/webp" : "image/jpeg";
+const mime = ext.endsWith(".png")
+  ? "image/png"
+  : ext.endsWith(".webp")
+    ? "image/webp"
+    : "image/jpeg";
 const content = readFileSync(imgPath).toString("base64");
 
 const url = `https://${location}-documentai.googleapis.com/v1/projects/${project}/locations/${location}/processors/${processorId}:process`;
