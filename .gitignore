@@ -146,3 +146,6 @@ vite.config.ts.timestamp-*
 .turbo/
 _tmp_*
 .vercel
+
+# Claude Code（個人設定はコミットしない）
+.claude/settings.local.json
