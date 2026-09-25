@@ -15,7 +15,17 @@ try {
   process.exit(0);
 }
 
-const TARGET_EXT = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".jsonc", ".css"]);
+const TARGET_EXT = new Set([
+  ".ts",
+  ".tsx",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  ".json",
+  ".jsonc",
+  ".css",
+]);
 if (!filePath || !TARGET_EXT.has(extname(filePath)) || !existsSync(filePath)) process.exit(0);
 
 const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
@@ -32,7 +42,9 @@ const result = spawnSync(
 if (result.error || /Cannot find module/.test(result.stderr ?? "")) process.exit(0);
 
 if (result.status !== 0) {
-  console.error(`Biome が自動修正できないエラーを検出しました（${filePath}）:\n${result.stdout}${result.stderr}`);
+  console.error(
+    `Biome が自動修正できないエラーを検出しました（${filePath}）:\n${result.stdout}${result.stderr}`,
+  );
   process.exit(2);
 }
 process.exit(0);
